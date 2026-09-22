@@ -1,3 +1,3 @@
 # 2026-2_AIcontest
 
-hello
+hihi
