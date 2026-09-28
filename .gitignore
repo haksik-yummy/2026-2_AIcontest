@@ -13,10 +13,8 @@ dist/
 build/
 *.egg
 
-# ===== Virtual Environments =====
-venv/
-.venv/
-env/
+# ===== Conda Virtual Environment =====
+haksik/
 
 # ===== Jupyter Notebook =====
 .ipynb_checkpoints/
@@ -31,20 +29,3 @@ env/
 # ===== OS =====
 .DS_Store
 Thumbs.db
-
-# ===== Model & Output =====
-models/
-outputs/
-*.pkl
-*.joblib
-*.h5
-*.pt
-*.pth
-*.onnx
-
-# ===== Logs =====
-logs/
-*.log
-wandb/
-mlruns/
-
