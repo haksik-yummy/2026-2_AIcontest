@@ -1,0 +1,50 @@
+# ===== Data Files =====
+# Raw data directory (large binary/geo files, ZIP archives)
+data/
+*.zip
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ===== Virtual Environments =====
+venv/
+.venv/
+env/
+
+# ===== Jupyter Notebook =====
+.ipynb_checkpoints/
+
+# ===== IDE / Editor =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Model & Output =====
+models/
+outputs/
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+
+# ===== Logs =====
+logs/
+*.log
+wandb/
+mlruns/
+
