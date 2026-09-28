@@ -32,9 +32,9 @@
 ## 🚀 환경 설정
 
 ```bash
-# 가상환경 생성 및 활성화
-python3 -m venv venv
-source venv/bin/activate
+# Conda 가상환경 생성 및 활성화
+conda create -n haksik python=3.12 -y
+conda activate haksik
 
 # 의존성 설치
 pip install -r requirements.txt
