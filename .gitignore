@@ -1,0 +1,25 @@
+# ===== Data =====
+# 원본 데이터는 용량이 커서 커밋하지 않음
+/data/*
+!/data/.gitkeep
+/DATA AI 경진대회 데이터*/
+*.zip
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ===== Secrets =====
+.env
+*.pem
+*.key
+
+# ===== IDE / OS =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
