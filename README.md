@@ -8,11 +8,11 @@
 
 | 결과물 | 위치 |
 |--------|------|
-| 도로 결빙 발생 영향요인 및 환경조건(임계값) | (작성 예정) |
-| 도로기상 미관측 지점 관측값 추정 AI 모델 | `model/` |
-| 결빙 위험도 기준표 | (작성 예정) |
-| 고속도로 구간별 결빙 위험도 지도 | `figures/` |
-| 성능지표 CSV (BIAS·MAE·RMSE, F1-score·Precision·Recall) | `data/results/` |
+| 도로 결빙 발생 영향요인 및 환경조건(임계값) | `data/results/icing_factors.csv`, `icing_conditions.csv` (05-1) |
+| 도로기상 미관측 지점 관측값 추정 AI 모델 | `model/road_temp_*` (03-3) |
+| 결빙 위험도 기준표 | `data/results/risk_criteria.csv` (05-2) |
+| 고속도로 구간별 결빙 위험도 지도 | `figures/risk_map.jpg`, `risk_map.png`, `risk_map.html`, `risk_map_shp/` (05-2) |
+| 성능지표 CSV (BIAS·MAE·RMSE, F1-score·Precision·Recall) | `data/results/estimation_scores.csv` (03-3), `icing_scores.csv` (04-3) |
 
 ## 2. 폴더 구성
 
@@ -21,13 +21,13 @@
 | `README.md` | 결과물 구성, 실행환경, 실행 방법 설명 |
 | `requirements.txt` | 주요 라이브러리 버전 (pip) |
 | `environment.yml` | 전체 실행환경 (conda) |
-| `data/` | 학습·평가 데이터. `raw/`에 제공 데이터를 둔다 (용량 문제로 저장소에는 미포함) |
-| `model/` | 학습된 모델 파일 |
-| `src/` | 데이터 처리, 변수 생성, 모델, 평가, 위험도 산출, 시각화 소스코드 |
-| `notebooks/` | 단계별 Jupyter Notebook (01~05) |
-| `scripts/` | 전처리, 학습, 평가, 위험도 지도 생성 스크립트 |
-| `demo/` | 추론 과정 데모영상 |
-| `figures/` | 결과 설명용 그림 |
+| `data/` | 학습·평가 데이터. `raw/`에 제공 데이터를 두고, 노트북이 `interim/`·`processed/`에 중간 자료, `results/`에 성능지표·기준표 CSV를 저장한다 (용량 문제로 저장소에는 미포함) |
+| `model/` | 학습된 모델 파일 (노면온도 추정 `road_temp_*`, 결빙 분류 `icing_*`) |
+| `src/` | 공통 설정(`config.py`)과 데이터 처리, 변수 생성, 모델, 평가, 위험도 산출, 시각화 모듈 뼈대 |
+| `notebooks/` | 단계별 Jupyter Notebook. 단계(01~05)별 폴더 안에 01-1~05-2로 나뉘어 있다 |
+| `scripts/` | 전처리, 학습, 평가, 위험도 지도 생성 스크립트 뼈대 (미구현) |
+| `demo/` | 추론 과정 데모영상 (준비 중) |
+| `figures/` | 결과 설명용 그림과 구간별 결빙 위험도 지도 (jpg·png·html·shapefile) |
 
 ### src/
 
@@ -42,6 +42,8 @@
 | `evaluate.py` | 성능지표 계산 |
 | `risk.py` | 결빙 영향인자 도출, 위험도 기준표, 구간별 위험도 |
 | `visualize.py` | 그림 및 지도 출력 |
+
+`config.py` 외의 모듈은 함수 구성만 정해 둔 뼈대이다. 현재 분석 코드는 `notebooks/`에 있다.
 
 ## 3. 데이터
 
@@ -62,7 +64,7 @@ data/raw/
 ```
 
 - 기간: 2024-11-01 ~ 2025-02-28, 2025-11-01 ~ 2026-02-28
-- 제공 데이터 외 추가 데이터: (작성 예정, 사용 시 출처·이용조건·근거 기재)
+- 제공 데이터 외 추가 데이터: 현재 사용하지 않음 (사용 시 출처·이용조건·근거 기재)
 
 ## 4. 실행환경
 
@@ -103,7 +105,30 @@ pip install -r requirements.txt
 
 ## 6. 실행 방법
 
-저장소 최상위 폴더에서 순서대로 실행한다.
+현재 분석은 `notebooks/`의 Notebook으로 실행한다. 01-2부터 05-2까지 번호 순서대로 실행한다 (01-1은 이론 정리 마크다운 문서).
+각 Notebook은 자신이 있는 단계 폴더(`notebooks/<단계 폴더>/`)를 작업 폴더로 두고 실행하며, 앞 Notebook이 저장한 중간 자료(`data/interim/`, `data/processed/`)를 뒤 Notebook이 불러 쓴다.
+
+| Notebook | 내용 |
+|----------|------|
+| `01_data_exploration/01-1_theory.md` | 이론적 배경과 검증할 가설 (마크다운 문서) |
+| `01_data_exploration/01-2_data_quality.ipynb` | 데이터 구성, 관측망, 결측·이상값·센서 고착 점검, 분석용 자료 저장 |
+| `01_data_exploration/01-3_road_surface.ipynb` | 노면온도와 노면상태(Ice) 분포 |
+| `01_data_exploration/01-4_icing_weather.ipynb` | 결빙 기상 조건, 두 겨울 비교, 기온감률, 사례, 검증 지점 |
+| `01_data_exploration/01-5_road_terrain_fog.ipynb` | 도로·지형 자료, 목표안개 관측소 |
+| `01_data_exploration/01-6_theory_check_icing.ipynb` | 이론 검증 Ⅰ: 결빙 조건 |
+| `01_data_exploration/01-7_theory_check_spatial.ipynb` | 이론 검증 Ⅱ: 노면온도의 공간 변동과 노면상태, 탐색 정리 |
+| `02_preprocessing_features/02-1_cleaning.ipynb` | 정제, 10분 시간축 정렬, 결빙 라벨 |
+| `02_preprocessing_features/02-2_features_segments.ipynb` | 변수 생성, 구간 분할 |
+| `03_observation_estimation/03-1_estimation_cv.ipynb` | 관측값 추정 후보 모델 교차검증, 최종 방법 선택 |
+| `03_observation_estimation/03-2_estimation_experiments.ipynb` | 관측값 추정 추가 실험 (고전 ML, MLP, 앙상블, 지점 특성) |
+| `03_observation_estimation/03-3_estimation_holdout.ipynb` | 관측값 추정 검증 지점 평가, 모델 저장 |
+| `04_icing_classification/04-1_icing_cv.ipynb` | 결빙 분류 후보 모델 교차검증, 최종 모델 선택·해석 |
+| `04_icing_classification/04-2_icing_experiments.ipynb` | 결빙 분류 고전 ML 기법·MLP·앙상블 비교 |
+| `04_icing_classification/04-3_icing_holdout.ipynb` | 결빙 분류 검증 지점 평가, 성능지표 산출 |
+| `05_risk_map/05-1_icing_factors.ipynb` | 구간별 추정, 결빙 영향인자·임계값 |
+| `05_risk_map/05-2_risk_map.ipynb` | 위험도 기준표, 구간별 위험도, 위험도 지도 |
+
+`scripts/`의 스크립트는 같은 과정을 명령줄로 실행하기 위한 뼈대이며 아직 구현되지 않았다. 구현 후 실행 순서는 다음과 같다.
 
 ```bash
 python scripts/preprocess.py      # 정제·변수 생성·구간 분할 → data/processed/
@@ -111,16 +136,6 @@ python scripts/train.py           # 검증 지점 제외 학습 → model/
 python scripts/evaluate.py        # 검증 지점 성능 평가 → data/results/
 python scripts/make_risk_map.py   # 구간별 위험도 산출·지도 → figures/
 ```
-
-Notebook으로 확인할 경우 `notebooks/`의 01~05를 순서대로 실행한다.
-
-| Notebook | 내용 |
-|----------|------|
-| `01_data_exploration.ipynb` | 데이터 구성, 기간, 지점, 결측, 노면상태 분포 확인 |
-| `02_preprocessing_features.ipynb` | 정제, 시간축 정렬, 변수 생성, 구간 분할 |
-| `03_observation_estimation.ipynb` | 관측값 추정 모델 학습 및 검증 |
-| `04_icing_classification.ipynb` | 결빙 분류 및 성능지표 산출 |
-| `05_risk_map.ipynb` | 영향인자·임계값, 위험도 기준표, 위험도 지도 |
 
 ## 7. 평가 방법
 
@@ -139,9 +154,9 @@ Notebook으로 확인할 경우 `notebooks/`의 01~05를 순서대로 실행한�
 
 | 항목 | 내용 |
 |------|------|
-| 활용 도구 | Claude Code (Claude Opus 5.5) |
+| 활용 도구 | Claude Code (Claude Opus 5.5), GitHub Copilot |
 | 활용 단계 | 프로젝트 구조 설계, 실행환경 문서화 |
-| 주요 활용 내용 | 제출 규정에 맞춘 폴더 구조와 `.gitignore`, 분석 코드 뼈대(모듈·함수 구성, Notebook 단계 구성), 실행환경 설정 파일과 README 초안 작성 |
+| 주요 활용 내용 | Claude Code: 제출 규정에 맞춘 폴더 구조와 `.gitignore`, 분석 코드 뼈대(모듈·함수 구성, Notebook 단계 구성), 실행환경 설정 파일과 README 초안 작성, 코드를 주피터 노트북에 통합, 논문 내용을 md 파일로 요약 저장<br>GitHub Copilot: 코드 및 주석 작성 보조 |
 | 참가자 주요 기여 및 검증 | 데이터 탐색·전처리, 변수 설계, 모델 선택·학습·평가, 함수 구현, 결과 분석을 팀원이 직접 수행 |
 | 검토한 대안 및 실패사례 | (작성 예정) |
 | 최종 선택 이유 | (작성 예정) |
