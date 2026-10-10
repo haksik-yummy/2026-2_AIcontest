@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 RAW_DIR = DATA_DIR / "raw"              # 경진대회 제공 데이터 (20261007 배포본)
 PROCESSED_DIR = DATA_DIR / "processed"  # 정제·병합한 중간 데이터
+INTERIM_DIR = DATA_DIR / "interim"      # 01(탐색) 노트북끼리 주고받는 분석용 자료
 RESULT_DIR = DATA_DIR / "results"       # 제출용 CSV (성능지표, 구간별 추정값 등)
 MODEL_DIR = ROOT / "model"
 FIGURE_DIR = ROOT / "figures"
@@ -44,7 +45,7 @@ HOLDOUT_STATIONS = {
 
 # ===== 결빙 판정 =====
 # 노면상태가 Ice이면 결빙(1), 그 외는 모두 비결빙(0)으로 이진 분류
-ICE_STATE_CODES = []  # TODO: 데이터 설명자료 PDF에서 Ice에 해당하는 노면상태 값 확인
+ICE_STATE_CODES = [4]  # 데이터 설명자료 PDF: 노면 번호 04 = Ice
 
 # ===== 구간 분할 =====
 SEGMENT_LENGTH_M = 1000  # 500 또는 1000 (제출 형식 기준)
