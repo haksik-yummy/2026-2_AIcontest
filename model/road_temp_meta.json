@@ -1,0 +1,59 @@
+{
+  "target": "rst",
+  "method": "앙상블",
+  "features": [
+    "nbr_rst",
+    "rst_phys",
+    "ta",
+    "tg",
+    "td",
+    "rh",
+    "ws",
+    "cloud",
+    "sunshine",
+    "sun_elev",
+    "sunlit",
+    "solar_eff"
+  ],
+  "ensemble": [
+    "LightGBM(핵심)",
+    "Ridge(핵심)",
+    "B1 주변 노면온도"
+  ],
+  "lgbm_params": {
+    "objective": "regression",
+    "learning_rate": 0.03,
+    "n_estimators": 600,
+    "num_leaves": 15,
+    "min_child_samples": 5000,
+    "subsample": 0.7,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.7,
+    "reg_lambda": 5.0,
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": -1
+  },
+  "lgbm_iterations": 598,
+  "train_stations": [
+    12103,
+    12209,
+    12210,
+    12211,
+    12409,
+    23202,
+    23203,
+    23204,
+    23403,
+    33103,
+    33206,
+    33409,
+    33410,
+    33412
+  ],
+  "holdout_stations": [
+    12410,
+    33411,
+    23402
+  ]
+}
