@@ -1,0 +1,24 @@
+# ===== Data =====
+# 경진대회 데이터(data/raw/)는 용량이 커서 커밋하지 않음
+/data/*
+!/data/.gitkeep
+*.zip
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# ===== Secrets =====
+.env
+*.pem
+*.key
+
+# ===== IDE / OS =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
