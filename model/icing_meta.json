@@ -26,10 +26,6 @@
     "cloud",
     "ta_min12h",
     "ta_d3h",
-    "nbr_ice",
-    "nbr_ice_3h",
-    "nbr_wet",
-    "nbr_snow",
     "nbr_rst",
     "hour_sin",
     "hour_cos",
@@ -37,7 +33,7 @@
     "sunlit",
     "season_day"
   ],
-  "threshold": 0.8481398084846887,
+  "threshold": 0.7276487736036535,
   "params": {
     "objective": "binary",
     "learning_rate": 0.03,
@@ -53,5 +49,5 @@
     "verbose": -1
   },
   "pos_weight": 5,
-  "selection": "지점 단위 교차검증 일별 F1(빈 날 제외)"
+  "selection": "지점 단위 교차검증 일별 F1(빈 날·결빙 없는 지점 제외)"
 }
