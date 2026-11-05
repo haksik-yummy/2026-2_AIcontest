@@ -49,7 +49,7 @@
 |---|---|
 | `GET /api/v1/ops/briefing?mode=history&start=&hours=15&group=sigungu&top=5` | 묶음별 우선 구간. `group`은 `sigungu`, `route`, `branch` (`branch`는 서버를 `--branches 지사.csv`로 실행해야 함) |
 | `GET /api/v1/ops/briefing?mode=live` | 마지막 수신 시각 기준 (앞으로의 예보가 아님) |
-| `GET /api/v1/ops/vulnerable` | 상습 결빙구간과 위험 등급 비교 (`ops/vulnerable_sections.py` 실행 후) |
+| `GET /api/v1/ops/vulnerable` | 기존 결빙취약구간과 위험 등급 비교 (`ops/vulnerable_sections.py` 실행 후) |
 | `GET /api/v1/reference/cctv` | 최신 CCTV 도로날씨 지점. 야간 판별 성능이 낮습니다 |
 
 정렬은 모델 예측 시간, 결빙 가능 조건 시간, 위험 등급, 최저 추정 노면온도 순입니다. 살포 시점이나 작업량을 정하지 않습니다.
