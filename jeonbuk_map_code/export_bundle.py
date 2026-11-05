@@ -178,9 +178,10 @@ def performance_summary():
     ice = ice[ice["방법"] == "LightGBM(결빙관련 라벨)"]
     rows_e = [{"stn": str(r["stn"]), "name": r["지점명"], "BIAS": r["BIAS"], "MAE": r["MAE"], "RMSE": r["RMSE"]}
               for _, r in est.iterrows()]
-    rows_i = [{"stn": str(r["stn"]), "name": r["지점명"], "empty_days": r["빈날처리"], "days": r["평가일수"],
-               "ice_days": r["결빙관측일수"], "false_alarm_days": r["오탐일수"], "F1": r["F1"],
-               "Precision": r["Precision"], "Recall": r["Recall"]} for _, r in ice.iterrows()]
+    score = lambda v: None if v == "산출불가" else float(v)  # noqa: E731  실제 결빙이 없는 지점은 지표가 없다
+    rows_i = [{"stn": str(r["stn"]), "name": r["지점명"], "days": int(r["평가일수"]), "ice_days": int(r["결빙관측일수"]),
+               "false_alarm_days": int(r["오탐일수"]), "stations_used": None if pd.isna(r["활용 지점 수"]) else int(r["활용 지점 수"]),
+               "F1": score(r["F1"]), "Precision": score(r["Precision"]), "Recall": score(r["Recall"])} for _, r in ice.iterrows()]
     return {"road_temperature": {"method": "앙상블+B3", "holdout": rows_e},
             "icing": {"method": "LightGBM(결빙관련 라벨)", "holdout": rows_i}}
 
@@ -217,10 +218,10 @@ def main():
             "grade": r["등급"], "grade_lv": GRADES.index(r["등급"]) + 1,
             "score": round(float(r["총점"]), 3), "s_meteo": round(float(r["기상"]), 3),
             "s_road": round(float(r["도로"]), 3), "s_terrain": round(float(r["지형"]), 3),
-            "levels": {k: int(r[k]) for k in ["M1", "M2", "R1", "R2", "T1", "T2", "T3"]},
+            "levels": {k: int(r[k]) for k in ["M1", "M2", "M3", "R1", "R2", "T1", "T2", "T3"]},
             "values": {k: (None if pd.isna(r[k]) else round(float(r[k]), 3)) for k in [
-                "icing_cond_hours", "icing_pred_hours", "bridge_ratio", "tunnel_ratio", "seg_dist_tunnel", "elev",
-                "tpi", "shade_winter", "dist_river", "rst_mean", "rst_night_mean", "rst_le0_hours"]},
+                "icing_cond_hours", "icing_pred_hours", "frz_snow_hours", "bridge_ratio", "tunnel_ratio", "seg_dist_tunnel",
+                "elev", "tpi", "shade_winter", "dist_river", "rst_mean", "rst_night_mean", "rst_le0_hours"]},
             "elev_max": round(float(segments.loc[i, "elev_max"]), 1),
             "stations": seg_stations.get(sid, []),
         }
@@ -292,7 +293,7 @@ def main():
                            "basis": r["기준 설정 근거"]})
     criteria = {
         "indicators": indicators, "weights": WEIGHTS,
-        "factor_rule": {"기상": "M1·M2 평균", "도로": "R1·R2 중 큰 값", "지형": "T1·T2·T3 평균"},
+        "factor_rule": {"기상": "M1·M2·M3 평균", "도로": "R1·R2 중 큰 값", "지형": "T1·T2·T3 평균"},
         "grades": [{"grade": g, "level": i + 1, "range": GRADE_RANGE[g], "meaning": GRADE_MEANING[g]}
                    for i, g in enumerate(GRADES)],
         "icing_condition": {"T_RST": cond_cfg["T_RST"], "T_RH": cond_cfg["T_RH"],
