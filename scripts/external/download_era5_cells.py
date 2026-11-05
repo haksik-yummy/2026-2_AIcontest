@@ -1,10 +1,17 @@
+"""ERA5-Land 격자 시계열을 받아 data/external/era5land_cells/에 격자별 CSV로 저장한다.
+
+실행: python scripts/external/download_era5_cells.py
+필요: CDS 계정과 ~/.cdsapirc, cdsapi 패키지 (자료를 다시 받을 때만 쓰므로 environment.yml에는 없다)
+"""
 import cdsapi, os, time, glob, shutil, zipfile
 import numpy as np, pandas as pd
 from functools import reduce
 
-BASE = r"C:\Users\기환\Desktop\sdk\era5land"
-MERGED = os.path.join(BASE, "merged")
-CELLS_DIR = os.path.join(BASE, "cells")
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE = os.path.join(ROOT, "data", "external")
+MERGED = os.path.join(BASE, "era5land_cells")          # 격자별 병합본 (src/external.py가 읽는 곳)
+CELLS_DIR = os.path.join(BASE, "era5land_zip")         # 내려받은 zip
+os.makedirs(MERGED, exist_ok=True)
 os.makedirs(CELLS_DIR, exist_ok=True)
 
 # 도로 중심선이 지나는 ERA5-Land 0.1° 격자 27칸 (격자 중심 위도, 경도)
@@ -58,7 +65,7 @@ def merge_zip(zip_path, out_csv):
     return o
 
 # 1) 이미 받은 지점별 파일(17개)에서 같은 격자 파일을 복사해 격자 이름으로 저장
-for f in glob.glob(os.path.join(MERGED, "era5land_[0-9]*.csv")):
+for f in glob.glob(os.path.join(BASE, "era5land_[0-9]*.csv")):
     g = pd.read_csv(f, nrows=1)
     key = (round(float(g["grid_lat"].iloc[0]), 1), round(float(g["grid_lon"].iloc[0]), 1))
     if key in NEED and not os.path.exists(cell_csv(*key)):
