@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>전북 고속도로 · 위치 데이터 지도</title>
+  <style>
+    :root {
+      --page: #f3f6f5; --surface: #fff; --ink: #153c40; --muted: #617878;
+      --border: #d7e3df; --land: #eef3f0; --jeonbuk: #dfeae4;
+      --bridge: #0e7e8b; --tunnel: #c57924; --rwis: #7754b5;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink); }
+    button, select { font: inherit; }
+    button, select { cursor: pointer; }
+    button:focus-visible, select:focus-visible, a:focus-visible {
+      outline: 3px solid var(--bridge); outline-offset: 3px;
+    }
+    .atlas { max-width: 1120px; margin: 0 auto; padding: 38px 26px; }
+    .eyebrow { font-size: 11px; letter-spacing: .16em; font-weight: 700; }
+    h1 { font-size: clamp(24px, 3.5vw, 36px); margin: 10px 0 8px; letter-spacing: -.05em; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+    .counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 24px 0; }
+    .stat { padding: 17px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+    .stat-label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .stat-value { margin-top: 9px; font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .stat-value span { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+    .swatch { display: inline-block; width: 9px; height: 9px; flex: 0 0 auto; }
+    .swatch.bridge { background: var(--bridge); border-radius: 50%; }
+    .swatch.tunnel { background: var(--tunnel); transform: rotate(45deg); }
+    .swatch.rwis { background: var(--rwis); }
+    .map-shell { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .legend { display: flex; flex-wrap: wrap; gap: 17px; }
+    .legend button { display: flex; gap: 7px; align-items: center; background: none; border: 0; padding: 7px 0; color: var(--ink); font-size: 13px; }
+    .legend button[aria-pressed="false"] { opacity: .4; text-decoration: line-through; }
+    .zoom-controls { display: flex; gap: 6px; }
+    .zoom-controls button { background: var(--surface); border: 1px solid var(--border); color: var(--ink); border-radius: 7px; min-height: 34px; min-width: 36px; padding: 4px 9px; }
+    #map { width: 100%; position: relative; }
+    #map svg { display: block; width: 100%; touch-action: none; background: var(--surface); }
+    .region { fill: var(--land); stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .region.main { fill: var(--jeonbuk); }
+    .city { fill: var(--muted); font-size: 12px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+    .mark { stroke: var(--surface); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+    .selection-ring { fill: none; stroke: var(--ink); stroke-width: 1.6; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .orientation { fill: var(--ink); font-size: 12px; pointer-events: none; }
+    .map-help { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 12px 20px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+    .selection { margin-top: 18px; display: grid; grid-template-columns: minmax(190px, 1fr) 2fr; gap: 18px; align-items: start; }
+    label { font-size: 12px; color: var(--muted); display: block; }
+    select { display: block; width: 100%; max-width: 100%; margin-top: 7px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--ink); padding: 11px 8px; font-size: 14px; }
+    #detail { margin: 0; min-height: 80px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+    #detail h2 { margin: 0 0 6px; font-size: 16px; }
+    #detail p { margin: 3px 0; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+    .coords { font-variant-numeric: tabular-nums; }
+    .footnote { margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+    details { color: var(--muted); margin-top: 10px; font-size: 12px; line-height: 1.8; }
+    details a { color: var(--bridge); }
+    #error { color: #a13232; padding: 16px; }
+    @media (max-width: 600px) {
+      .atlas { padding: 22px 14px; }
+      .counts { gap: 7px; margin: 18px 0; }
+      .stat { padding: 13px 10px; }
+      .stat-label { font-size: 11px; gap: 5px; }
+      .stat-value { font-size: 26px; }
+      .toolbar { padding: 10px 12px; gap: 7px; }
+      .legend { gap: 12px; }
+      .selection { grid-template-columns: 1fr; gap: 12px; }
+      .zoom-controls button { min-height: 40px; }
+    }
+  </style>
+</head>
+<body>
+<main class="atlas">
+  <header>
+    <div class="eyebrow">JEONBUK / ROAD OBSERVATION ATLAS</div>
+    <h1>전북 고속도로, 위치로 읽다</h1>
+    <p class="subtitle">교량·터널 대표 위치와 도로기상 관측망을 한눈에 비교합니다.</p>
+  </header>
+  <div class="counts" aria-label="지도에 표시된 고유 위치 수">
+    <div class="stat"><div class="stat-label"><i class="swatch bridge"></i>교량 대표 위치</div><div class="stat-value" id="bridge-count"></div></div>
+    <div class="stat"><div class="stat-label"><i class="swatch tunnel"></i>터널 대표 위치</div><div class="stat-value" id="tunnel-count"></div></div>
+    <div class="stat"><div class="stat-label"><i class="swatch rwis"></i>RWIS 관측 위치</div><div class="stat-value" id="rwis-count"></div></div>
+  </div>
+  <section class="map-shell" aria-label="위치 지도">
+    <div class="toolbar">
+      <div class="legend" aria-label="표시할 종류 선택"></div>
+      <div class="zoom-controls">
+        <button id="zoom-in" type="button" aria-label="확대">＋</button>
+        <button id="zoom-out" type="button" aria-label="축소">−</button>
+        <button id="reset" type="button">전체 보기</button>
+      </div>
+    </div>
+    <div id="map"><svg role="img" aria-label="전북 시군 경계와 교량·터널·RWIS 위치 지도"></svg></div>
+    <div class="map-help"><span>휠·두 손가락으로 확대 / 드래그로 이동 / 지점 선택</span><span id="scale-label"></span></div>
+  </section>
+  <section class="selection" aria-label="선택 지점 정보">
+    <label for="point-picker">지점 선택<select id="point-picker"><option value="">지도 또는 목록에서 지점을 선택하세요</option></select></label>
+    <div id="detail" aria-live="polite"><h2>선택한 지점</h2><p>지점을 선택하면 노선과 위경도를 확인할 수 있습니다.</p></div>
+  </section>
+  <p class="footnote">교량·터널은 동일 좌표를 묶은 대표 위치입니다. 실제 시설물 길이·입구·출구를 뜻하지 않습니다.<br>이 지도는 위치 분포를 보여주며 결빙 위험도는 표시하지 않습니다. <span id="period"></span></p>
+  <details><summary>데이터와 지도 출처</summary>
+    <div id="sources"></div>
+    <div>배경: KOSTAT 2013 시군구 경계 / <a href="https://github.com/southkorea/southkorea-maps" target="_blank" rel="noopener noreferrer">southkorea-maps</a>. 현재 행정경계의 정밀 판정용이 아닙니다.</div>
+    <div>시각화: D3 7.9.0 (ISC License). 모든 데이터와 표시 코드는 이 파일 안에 포함되어 있습니다.</div>
+  </details>
+  <p id="error" role="alert" hidden></p>
+</main>
+<script>__D3_SOURCE__</script>
+<script>
+"use strict";
+// build_map.py가 CSV와 배경 지도를 아래 객체로 삽입합니다.
+const MAP_DATA = __MAP_DATA__;
+
+(() => {
+  const data = MAP_DATA;
+  const kinds = [
+    { id: "bridge", label: "교량", color: "var(--bridge)", shape: d3.symbolCircle, size: 22 },
+    { id: "tunnel", label: "터널", color: "var(--tunnel)", shape: d3.symbolDiamond, size: 70 },
+    { id: "rwis", label: "RWIS", color: "var(--rwis)", shape: d3.symbolSquare, size: 80 }
+  ];
+  const visible = new Set(kinds.map(kind => kind.id));
+  const svg = d3.select("#map svg");
+  const picker = document.getElementById("point-picker");
+  const detail = document.getElementById("detail");
+  let selectedId = "";
+  let transform = d3.zoomIdentity;
+  let width = 0;
+  let projection, mapLayer, markLayer, selectionRing, zoom, points;
+
+  // 종류마다 색과 모양을 고정합니다. 숫자는 원본 행 수가 아닌 대표 위치 수입니다.
+  kinds.forEach(kind => {
+    const count = data.points.filter(point => point.kind === kind.id).length;
+    document.getElementById(kind.id + "-count").textContent = count.toLocaleString() + "곳";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.kind = kind.id;
+    button.setAttribute("aria-pressed", "true");
+    const swatch = document.createElement("span");
+    swatch.className = "swatch " + kind.id;
+    button.append(swatch, document.createTextNode(kind.label));
+    button.onclick = () => {
+      visible.has(kind.id) ? visible.delete(kind.id) : visible.add(kind.id);
+      updateVisibility();
+    };
+    document.querySelector(".legend").append(button);
+  });
+
+  data.points.forEach(point => {
+    const kind = kinds.find(kind => kind.id === point.kind);
+    const option = document.createElement("option");
+    option.value = point.id;
+    option.textContent = `${kind.label} · ${point.name} · ${point.road}`;
+    picker.append(option);
+  });
+  document.getElementById("period").textContent = "RWIS: " + data.meta.rwis.period;
+  Object.values(data.meta).forEach(info => {
+    const line = document.createElement("div");
+    line.textContent = `${info.file}: 원본 ${info.input_rows.toLocaleString()}행 → 표시 ${info.points}곳` +
+      (info.invalid_rows ? ` (좌표·지점 누락 ${info.invalid_rows}행 제외)` : "");
+    document.getElementById("sources").append(line);
+  });
+
+  function clearSelection() {
+    selectedId = "";
+    picker.value = "";
+    selectionRing.attr("display", "none");
+    detail.replaceChildren();
+    const heading = document.createElement("h2");
+    heading.textContent = "선택한 지점";
+    const line = document.createElement("p");
+    line.textContent = "지도를 누르거나 목록에서 지점을 선택하세요.";
+    detail.append(heading, line);
+  }
+
+  function updateVisibility() {
+    document.querySelectorAll(".legend button").forEach(button => {
+      button.setAttribute("aria-pressed", String(visible.has(button.dataset.kind)));
+    });
+    markLayer.selectAll(".mark").attr("display", point => visible.has(point.kind) ? null : "none");
+    const selected = points.find(point => point.id === selectedId);
+    if (selected && !visible.has(selected.kind)) clearSelection();
+  }
+
+  function selectPoint(point) {
+    if (!point) return;
+    selectedId = point.id;
+    picker.value = point.id;
+    selectionRing.attr("display", null).attr("cx", point.xy[0])
+      .attr("cy", point.xy[1]).attr("r", 11 / transform.k);
+    detail.replaceChildren();
+    const heading = document.createElement("h2");
+    heading.textContent = point.name;
+    const road = document.createElement("p");
+    road.textContent = `${kinds.find(kind => kind.id === point.kind).label} · ${point.road}`;
+    const coord = document.createElement("p");
+    coord.className = "coords";
+    coord.textContent = `위도 ${point.lat.toFixed(6)} / 경도 ${point.lon.toFixed(6)}`;
+    detail.append(heading, road, coord);
+    if (point.kind !== "rwis") {
+      const note = document.createElement("p");
+      note.textContent = `원본 ${point.count}행을 같은 위치로 묶었습니다. 시설물 개수와는 다를 수 있습니다.`;
+      detail.append(note);
+    } else if (point.station_id) {
+      const station = document.createElement("p");
+      station.textContent = "관측 지점번호 " + point.station_id;
+      detail.append(station);
+    }
+  }
+
+  picker.onchange = () => {
+    const point = points.find(point => point.id === picker.value);
+    if (!point) { clearSelection(); return; }
+    visible.add(point.kind);
+    updateVisibility();
+    selectPoint(point);
+    // 확대 중 화면 밖 지점을 골라도 해당 위치가 보이도록 이동합니다.
+    const height = Number(svg.attr("height"));
+    const next = d3.zoomIdentity.translate(width / 2, height / 2)
+      .scale(transform.k).translate(-point.xy[0], -point.xy[1]);
+    svg.call(zoom.transform, next);
+  };
+
+  function draw() {
+    width = document.getElementById("map").clientWidth || 900;
+    const height = Math.max(410, Math.min(650, width * .75));
+    svg.attr("viewBox", `0 0 ${width} ${height}`).attr("height", height);
+    svg.selectAll("*").remove();
+
+    // 실제 GeoJSON과 위경도를 지도에 투영합니다. 점을 연결해 도로선을 추측하지 않습니다.
+    const fitObjects = {
+      type: "FeatureCollection",
+      features: data.focus.features.concat(data.points.map(point => ({
+        type: "Feature", geometry: { type: "Point", coordinates: [point.lon, point.lat] }
+      })))
+    };
+    projection = d3.geoMercator().fitExtent([[22, 30], [width - 22, height - 30]], fitObjects);
+    const path = d3.geoPath(projection);
+    mapLayer = svg.append("g");
+    mapLayer.selectAll("path.region").data(data.geo.features).join("path")
+      .attr("class", feature => "region" + (String(feature.properties.code).startsWith("35") ? " main" : ""))
+      .attr("d", path);
+
+    // 전주 두 구는 하나의 '전주' 라벨로 표시해 겹침을 줄입니다.
+    const cities = data.focus.features.filter(feature => feature.properties.name !== "전주시덕진구");
+    mapLayer.append("g").selectAll("text").data(cities).join("text")
+      .attr("class", "city").attr("text-anchor", "middle")
+      .attr("transform", feature => `translate(${path.centroid(feature)})`)
+      .text(feature => feature.properties.name.replace("전주시완산구", "전주"));
+
+    points = data.points.map(point => ({ ...point, xy: projection([point.lon, point.lat]) }));
+    markLayer = mapLayer.append("g");
+    markLayer.selectAll("path").data(points).join("path")
+      .attr("class", "mark")
+      .attr("d", point => {
+        const kind = kinds.find(kind => kind.id === point.kind);
+        return d3.symbol().type(kind.shape).size(kind.size)();
+      })
+      .attr("transform", point => `translate(${point.xy})`)
+      .attr("fill", point => kinds.find(kind => kind.id === point.kind).color)
+      .attr("opacity", point => point.kind === "bridge" ? .8 : 1);
+    selectionRing = mapLayer.append("circle").attr("class", "selection-ring").attr("display", "none");
+    svg.append("text").attr("class", "orientation").attr("x", width - 26)
+      .attr("y", 24).attr("text-anchor", "end").text("N ↑");
+
+    zoom = d3.zoom().extent([[0, 0], [width, height]]).scaleExtent([1, 12])
+      .clickDistance(5)
+      .on("zoom", event => {
+        transform = event.transform;
+        mapLayer.attr("transform", transform);
+        // 확대해도 점 크기는 유지하여 시설물들이 지나치게 커지지 않게 합니다.
+        markLayer.selectAll("path").attr("transform", point => `translate(${point.xy}) scale(${1 / transform.k})`);
+        selectionRing.attr("r", 11 / transform.k);
+        mapLayer.selectAll(".city").style("font-size", `${12 / transform.k}px`)
+          .style("stroke-width", `${3 / transform.k}px`);
+        const first = projection.invert(transform.invert([width / 2 - 50, height / 2]));
+        const second = projection.invert(transform.invert([width / 2 + 50, height / 2]));
+        const km = d3.geoDistance(first, second) * 6371.0088;
+        document.getElementById("scale-label").textContent = `화면 100px ≈ ${km.toFixed(1)}km`;
+      });
+    svg.call(zoom).call(zoom.transform, d3.zoomIdentity);
+    svg.on("click.select", event => {
+      if (event.defaultPrevented) return;
+      const local = transform.invert(d3.pointer(event));
+      const nearest = d3.least(points.filter(point => visible.has(point.kind)), point =>
+        Math.hypot(point.xy[0] - local[0], point.xy[1] - local[1]));
+      if (nearest && Math.hypot(nearest.xy[0] - local[0], nearest.xy[1] - local[1]) * transform.k < 24) {
+        selectPoint(nearest);
+      }
+    });
+    updateVisibility();
+    const selected = points.find(point => point.id === selectedId);
+    if (selected) selectPoint(selected);
+  }
+
+  document.getElementById("zoom-in").onclick = () => svg.call(zoom.scaleBy, 1.5);
+  document.getElementById("zoom-out").onclick = () => svg.call(zoom.scaleBy, 1 / 1.5);
+  document.getElementById("reset").onclick = () => svg.call(zoom.transform, d3.zoomIdentity);
+
+  try {
+    draw();
+    const resize = new ResizeObserver(() => {
+      if (Math.abs(document.getElementById("map").clientWidth - width) > 1) draw();
+    });
+    resize.observe(document.getElementById("map"));
+  } catch (error) {
+    const message = document.getElementById("error");
+    message.hidden = false;
+    message.textContent = "지도를 표시하지 못했습니다: " + error.message;
+    console.error(error);
+  }
+})();
+</script>
+</body>
+</html>
