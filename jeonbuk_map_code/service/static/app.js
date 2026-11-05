@@ -246,7 +246,7 @@
     }
     item(`background:${token("--no-data")};height:3px`, "자료 없음");
     item(`background:${token("--station")}`, "RWIS", "key box");
-    if (meta.vulnerable_sections) item(`background:${token("--band")};height:10px`, "상습 결빙구간");
+    if (meta.vulnerable_sections) item(`background:${token("--band")};height:10px`, "기존 결빙취약구간");
   }
 
   function repaint() {
