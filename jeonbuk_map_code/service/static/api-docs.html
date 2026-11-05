@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>결빙 위험도 API 설명</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .doc { max-width: 900px; margin: 0 auto; padding: 22px 18px 40px; font-size: 14px; line-height: 1.7; }
+    .doc h2 { font-size: 17px; margin: 22px 0 6px; }
+    .doc code { font-size: 13px; }
+    .doc pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; overflow: auto; font-size: 12.5px; }
+    .doc a { color: var(--focus); }
+    .doc td { font-size: 13px; }
+  </style>
+</head>
+<body>
+<main class="doc">
+  <h1>결빙 위험도 API</h1>
+  <p>전체 입력·출력 계약은 <code>service/API.md</code>에 있습니다. 아래 링크는 이 서버에서 바로 동작합니다. 값은 분석 추정이며 실제 노면 결빙을 확인한 값이 아닙니다.</p>
+
+  <h2>조회</h2>
+  <table>
+    <tr><th>요청</th><th>내용</th></tr>
+    <tr><td><a href="/api/v1/metadata">/api/v1/metadata</a></td><td>기간, 기준, 모델과 검증 성능, 수신 상태</td></tr>
+    <tr><td><a href="/api/v1/segments?route=%ED%98%B8%EB%82%A8%EC%84%A0">/api/v1/segments?route=호남선</a></td><td>구간 GeoJSON</td></tr>
+    <tr><td><a href="/api/v1/segments/TD-014">/api/v1/segments/TD-014</a></td><td>구간 상세와 지표 근거</td></tr>
+    <tr><td><a href="/api/v1/segments/SH-044/timeseries?from=2025-01-28T00:00%2B09:00">/api/v1/segments/SH-044/timeseries?from=…</a></td><td>시간별 추정값과 관측소 실측값</td></tr>
+    <tr><td><a href="/api/v1/status?mode=history&at=2025-01-28T06:00%2B09:00">/api/v1/status?mode=history&amp;at=…</a></td><td>그 시각의 구간별 상태</td></tr>
+    <tr><td><a href="/api/v1/status?mode=history&at=2025-01-28T06:00%2B09:00&format=geojson">…&amp;format=geojson</a></td><td>같은 값을 GeoJSON으로</td></tr>
+    <tr><td><a href="/api/v1/current">/api/v1/current</a></td><td>최신 수신값. 없거나 오래되면 값을 비움</td></tr>
+    <tr><td><a href="/api/v1/nearest?lat=35.6&lon=126.75">/api/v1/nearest?lat=35.6&amp;lon=126.75</a></td><td>가장 가까운 구간</td></tr>
+  </table>
+
+  <h2>경로</h2>
+  <table>
+    <tr><th>요청</th><th>내용</th></tr>
+    <tr><td><a href="/api/v1/route-risk/stretch?route=%ED%86%B5%EC%98%81-%EB%8C%80%EC%A0%84%EC%A4%91%EB%B6%80%EC%84%A0&from_km=0&to_km=46&at=2025-02-07T06:00%2B09:00">/api/v1/route-risk/stretch?…</a></td><td>노선 km 범위의 위험 (키 불필요)</td></tr>
+    <tr><td><code>POST /api/v1/route-risk</code></td><td>경로 좌표를 받아 지나는 구간과 통과 시각의 값</td></tr>
+    <tr><td><code>GET /api/v1/naver/directions?start=&amp;goal=&amp;at=</code></td><td>네이버 Directions 5 경로와 위험 요약 (서버 키 필요)</td></tr>
+  </table>
+<pre>curl -X POST http://localhost:8000/api/v1/route-risk \
+  -H "Content-Type: application/json" \
+  -d '{"path": [[126.8,35.6],[126.81,35.62]], "mode": "history", "at": "2025-01-28T06:00+09:00"}'</pre>
+
+  <h2>운영</h2>
+  <table>
+    <tr><th>요청</th><th>내용</th></tr>
+    <tr><td><a href="/api/v1/ops/briefing?start=2025-01-27T18:00%2B09:00&hours=15&group=sigungu&top=5">/api/v1/ops/briefing?…</a></td><td>시군·노선별 우선 구간</td></tr>
+    <tr><td><a href="/api/v1/ops/vulnerable">/api/v1/ops/vulnerable</a></td><td>상습 결빙구간과 위험 등급 비교</td></tr>
+    <tr><td><a href="/api/v1/reference/cctv">/api/v1/reference/cctv</a></td><td>최신 CCTV 도로날씨 지점</td></tr>
+  </table>
+
+  <h2>입력</h2>
+  <p><code>POST /api/v1/ingest</code>는 <code>Authorization: Bearer 토큰</code>이 맞을 때만 받습니다. 서버의 <code>ICING_INGEST_TOKEN</code> 환경변수가 없으면 닫혀 있습니다.</p>
+
+  <h2>상태의 뜻</h2>
+  <table>
+    <tr><th>표시</th><th>뜻</th></tr>
+    <tr><td>조건 미충족</td><td>선택한 결빙 조건에 해당하지 않음. 안전 판정이 아님</td></tr>
+    <tr><td>결빙 가능 조건</td><td>추정 노면온도 ≤ 1°C, 습도 ≥ 70%, 수분 공급</td></tr>
+    <tr><td>결빙 가능 조건 + 모델 예측</td><td>위 조건이고 분류 확률도 임계값 이상</td></tr>
+    <tr><td>정보 부족</td><td>수신 자료가 없거나 신선도 기준보다 오래됨. 상태를 만들어 내지 않음</td></tr>
+  </table>
+</main>
+</body>
+</html>
