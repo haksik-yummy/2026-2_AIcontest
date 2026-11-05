@@ -165,6 +165,20 @@ def _route_ends(xy, graph, start):
     return nodes[np.argmin(xy[nodes, 1])], nodes[np.argmax(xy[nodes, 1])]
 
 
+def mainline_flags(centerline, segments, near_m=60):
+    """구간이 본선 경로 위에 있는지 돌려줍니다. 구간 위 11개 점의 절반 이상이 경로에서 near_m 안이면 본선입니다.
+
+    02-2의 본선 조건(양방통행 또는 2차로 이상)을 통과한 IC·JC 연결로를 가려냅니다.
+    """
+    flags = {}
+    for route in ANCHORS:
+        line = shapely.LineString(km_path(centerline, route)[0])
+        for row in segments[segments["route"] == route].itertuples():
+            pts = shapely.line_interpolate_point(row.geometry, np.linspace(0, 1, 11), normalized=True)
+            flags[row.seg_id] = bool(np.mean(shapely.distance(pts, line) <= near_m) >= 0.5)
+    return pd.Series(flags, name="on_mainline")
+
+
 def locate_sections(centerline, segments, sections=SECTIONS, max_dist_m=200):
     """22개소를 구간에 연결한다.
 
