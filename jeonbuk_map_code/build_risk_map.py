@@ -2,7 +2,7 @@
 
 실행: python build_risk_map.py --open
 Python 3.9 이상. 추가 패키지와 인터넷 연결은 필요하지 않습니다.
-bundle/은 export_bundle.py(프로젝트 환경)로 만듭니다. 상습 결빙구간 층은 ops/vulnerable_sections.py를 실행했을 때만 들어갑니다.
+bundle/은 export_bundle.py(프로젝트 환경)로 만듭니다. 기존 결빙취약구간 층은 ops/vulnerable_sections.py를 실행했을 때만 들어갑니다.
 """
 
 import argparse
@@ -49,7 +49,7 @@ def build(args):
     output.write_text(page, encoding="utf-8")
     n_vuln = len(payload["vulnerable"]["features"]) if payload["vulnerable"] else 0
     print(f"구간 {meta['n_segments']}개, 시각 {meta['time']['n_hours']:,}개, 관측소 {len(payload['stations'])}곳, "
-          f"상습 결빙구간 {n_vuln}개")
+          f"기존 결빙취약구간 {n_vuln}곳")
     print(f"지도 저장: {output} ({output.stat().st_size / 1e6:.1f} MB)")
     if args.open:
         webbrowser.open(output.as_uri())
