@@ -5,7 +5,6 @@ API 응답 해석 검사의 입력은 문서와 제공 CSV 열 순서로 만든 
 """
 
 import json
-import os
 import shutil
 import sys
 import tempfile
