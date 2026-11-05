@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>전북 고속도로 결빙 위험도 지도</title>
+  <style>
+    /* 색은 역할(토큰)로만 쓴다. 상태 4색은 밝기 모드와 관계없이 같다. */
+    .atlas {
+      color-scheme: light;
+      --page: #f9f9f7; --surface: #fcfcfb; --land: #f1f0ec; --land-main: #e6e5df; --land-line: #d5d4cc;
+      --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7;
+      --border: rgba(11, 11, 11, .10); --casing: #8f8e88; --focus: #2a78d6;
+      --series-1: #2a78d6; --series-1-track: #cde2fb; --series-2: #eb6834;
+      --div-cold: #2a78d6; --div-mid: #f0efec; --div-warm: #e34948;
+      --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+      --state-none: #c3c2b7; --station: #52514e; --band: rgba(11, 11, 11, .16);
+      font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:where(:not([data-theme="light"])) .atlas {
+        color-scheme: dark;
+        --page: #0d0d0d; --surface: #1a1a19; --land: #222221; --land-main: #2c2c2a; --land-line: #383835;
+        --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+        --border: rgba(255, 255, 255, .10); --casing: #0d0d0d; --focus: #3987e5;
+        --series-1: #3987e5; --series-1-track: #184f95; --series-2: #d95926;
+        --div-cold: #3987e5; --div-mid: #383835; --div-warm: #e66767;
+        --state-none: #5a5955; --station: #c3c2b7; --band: rgba(255, 255, 255, .20);
+      }
+    }
+    :root[data-theme="dark"] .atlas {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --land: #222221; --land-main: #2c2c2a; --land-line: #383835;
+      --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+      --border: rgba(255, 255, 255, .10); --casing: #0d0d0d; --focus: #3987e5;
+      --series-1: #3987e5; --series-1-track: #184f95; --series-2: #d95926;
+      --div-cold: #3987e5; --div-mid: #383835; --div-warm: #e66767;
+      --state-none: #5a5955; --station: #c3c2b7; --band: rgba(255, 255, 255, .20);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f9f9f7; }
+    @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) body { background: #0d0d0d; } }
+    :root[data-theme="dark"] body { background: #0d0d0d; }
+    .atlas { background: var(--page); color: var(--ink); min-height: 100vh; }
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 24px 48px; }
+    button, select, input { font: inherit; color: inherit; }
+    button, select { cursor: pointer; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    .eyebrow { font-size: 11px; letter-spacing: .14em; font-weight: 700; color: var(--ink-2); }
+    h1 { font-size: clamp(24px, 3.2vw, 34px); margin: 8px 0 6px; letter-spacing: -.03em; }
+    h2 { font-size: 16px; margin: 0; }
+    .subtitle { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.7; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+    .tiles { display: grid; grid-template-columns: repeat(4, 1fr) 1.25fr; gap: 12px; margin: 22px 0 18px; }
+    .tile { padding: 14px 16px; }
+    .tile-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+    .tile-value { margin-top: 6px; font-size: 28px; font-weight: 600; }
+    .tile-value small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 4px; }
+    .tile-note { margin-top: 4px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .key { display: inline-block; flex: 0 0 auto; width: 16px; height: 4px; border-radius: 2px; }
+    .key.box { width: 10px; height: 10px; border-radius: 3px; }
+    /* 필터 줄: 지도·띠 그림·상세 그림·표가 모두 이 한 줄의 선택을 따른다 */
+    .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 12px 16px; margin-bottom: 12px; }
+    .seg-btns { display: inline-flex; border: 1px solid var(--axis); border-radius: 9px; overflow: hidden; }
+    .seg-btns button { border: 0; background: transparent; padding: 7px 12px; font-size: 13px; }
+    .seg-btns button + button { border-left: 1px solid var(--axis); }
+    .seg-btns button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+    .time-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .time-group[aria-disabled="true"] { opacity: .45; }
+    .time-group select { padding: 6px 8px; border: 1px solid var(--axis); border-radius: 8px; background: var(--surface); font-size: 13px; }
+    .time-group input[type=range] { width: 150px; accent-color: var(--ink); }
+    .icon-btn { border: 1px solid var(--axis); background: var(--surface); border-radius: 8px; min-width: 34px; min-height: 32px; padding: 3px 9px; font-size: 13px; }
+    .now { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; min-width: 150px; }
+    .events { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--ink-2); width: 100%; }
+    .chip { border: 1px solid var(--axis); background: transparent; border-radius: 999px; padding: 3px 10px; font-size: 12px; }
+    .chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--surface); }
+    .layers { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); }
+    .layers label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    .map-card { position: relative; overflow: hidden; }
+    .map-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; padding: 12px 16px 8px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; font-size: 12px; color: var(--ink-2); }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-title { font-weight: 600; color: var(--ink); margin-right: 2px; }
+    .zoom { display: flex; gap: 6px; }
+    #map { position: relative; }
+    #map svg { display: block; width: 100%; touch-action: none; }
+    .region { fill: var(--land); stroke: var(--land-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+    .region.main { fill: var(--land-main); }
+    .city { fill: var(--muted); font-size: 12px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+    .seg-casing { fill: none; stroke: var(--casing); stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .seg-line { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .seg-hit { fill: none; stroke: transparent; stroke-width: 16px; vector-effect: non-scaling-stroke; cursor: pointer; }
+    .bridge { fill: none; stroke: var(--ink); stroke-linecap: butt; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .tunnel { fill: none; stroke: var(--ink); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .vuln { fill: none; stroke: var(--band); stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .sel-ring { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .station { stroke: var(--surface); stroke-width: 2px; vector-effect: non-scaling-stroke; cursor: pointer; }
+    .station-ring { fill: none; stroke: var(--critical); stroke-width: 2.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
+    .orientation { fill: var(--ink-2); font-size: 12px; pointer-events: none; }
+    .map-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 16px 12px; font-size: 12px; color: var(--muted); }
+    .tooltip { position: absolute; z-index: 5; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .12); border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.55; max-width: 260px; }
+    .tooltip strong { font-size: 14px; }
+    .tooltip .sub { color: var(--ink-2); }
+    .tooltip .row { display: flex; gap: 6px; align-items: center; }
+    .grid2 { display: grid; grid-template-columns: minmax(330px, 5fr) 7fr; gap: 12px; margin-top: 12px; align-items: start; }
+    .panel { padding: 14px 16px 16px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .panel-head select { padding: 6px 8px; border: 1px solid var(--axis); border-radius: 8px; background: var(--surface); font-size: 13px; max-width: 100%; }
+    .meta-line { font-size: 13px; color: var(--ink-2); margin: 2px 0; line-height: 1.6; }
+    .grade-badge { display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 4px; font-size: 14px; }
+    .grade-badge b { font-size: 18px; }
+    .meters { display: grid; grid-template-columns: 36px 1fr 38px; gap: 6px 8px; align-items: center; font-size: 12px; margin: 10px 0 4px; }
+    .meter { height: 8px; border-radius: 4px; background: var(--series-1-track); position: relative; overflow: hidden; }
+    .meter i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--series-1); }
+    .meters .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+    th { color: var(--ink-2); font-weight: 600; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pips { display: inline-flex; gap: 2px; vertical-align: middle; }
+    .pips i { width: 7px; height: 7px; border-radius: 2px; background: var(--grid); }
+    .pips i.on { background: var(--ink-2); }
+    .basis { color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .chart-title { font-size: 13px; font-weight: 600; margin: 14px 0 4px; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); margin: 2px 0 4px; }
+    .chart { position: relative; }
+    .chart svg { display: block; width: 100%; overflow: visible; }
+    .axis text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .axis path, .axis line { stroke: var(--axis); }
+    .gridline line { stroke: var(--grid); }
+    .gridline path { display: none; }
+    .strip-wrap { position: relative; }
+    .strip-wrap canvas { display: block; width: 100%; image-rendering: pixelated; }
+    .strip-wrap svg { position: absolute; left: 0; top: 0; width: 100%; overflow: visible; pointer-events: none; }
+    .strip-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .note { font-size: 12px; color: var(--muted); line-height: 1.7; margin: 6px 0 0; }
+    details.table-view { margin-top: 12px; padding: 10px 16px; }
+    details.table-view summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+    .table-scroll { max-height: 460px; overflow: auto; margin-top: 8px; }
+    .table-scroll thead th { position: sticky; top: 0; background: var(--surface); }
+    footer { margin-top: 18px; font-size: 12px; color: var(--ink-2); line-height: 1.8; }
+    footer h2 { font-size: 13px; margin: 14px 0 4px; }
+    footer ul { margin: 0; padding-left: 18px; }
+    #error { color: var(--critical); padding: 12px 0; }
+    @media (max-width: 980px) {
+      .tiles { grid-template-columns: repeat(2, 1fr); }
+      .grid2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .wrap { padding: 20px 12px 36px; }
+      .tile-value { font-size: 24px; }
+      .time-group input[type=range] { width: 110px; }
+    }
+  </style>
+</head>
+<body>
+<div class="atlas" id="atlas">
+<main class="wrap">
+  <header>
+    <div class="eyebrow">JEONBUK EXPRESSWAY / ICING RISK ATLAS</div>
+    <h1>전북 고속도로 구간별 결빙 위험도</h1>
+    <p class="subtitle" id="subtitle"></p>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="위험 등급별 구간 수"></section>
+
+  <section class="card controls" aria-label="지도 보기 선택">
+    <div class="seg-btns" role="group" aria-label="지도 색">
+      <button type="button" data-mode="grade" aria-pressed="true">위험 등급</button>
+      <button type="button" data-mode="rst" aria-pressed="false">추정 노면온도</button>
+      <button type="button" data-mode="state" aria-pressed="false">결빙 가능 조건</button>
+    </div>
+    <div class="time-group" id="time-group">
+      <select id="date-pick" aria-label="날짜"></select>
+      <button class="icon-btn" id="prev-hour" type="button" aria-label="한 시간 전">‹</button>
+      <input id="hour" type="range" min="0" max="23" step="1" aria-label="시각">
+      <button class="icon-btn" id="next-hour" type="button" aria-label="한 시간 뒤">›</button>
+      <button class="icon-btn" id="play" type="button" aria-pressed="false">재생</button>
+      <span class="now" id="now" aria-live="polite"></span>
+    </div>
+    <div class="layers" aria-label="표시할 층">
+      <label><input type="checkbox" data-layer="bridge" checked>교량 구간</label>
+      <label><input type="checkbox" data-layer="tunnel" checked>터널 구간</label>
+      <label><input type="checkbox" data-layer="station" checked>RWIS 관측소</label>
+      <label id="vuln-toggle" hidden><input type="checkbox" data-layer="vuln" checked>상습 결빙구간(행정안전부)</label>
+    </div>
+    <div class="events" id="events"><span>주요 사례일</span></div>
+  </section>
+
+  <section class="card map-card" aria-label="구간별 지도">
+    <div class="map-top">
+      <div class="legend" id="legend"></div>
+      <div class="zoom">
+        <button class="icon-btn" id="zoom-in" type="button" aria-label="확대">＋</button>
+        <button class="icon-btn" id="zoom-out" type="button" aria-label="축소">−</button>
+        <button class="icon-btn" id="zoom-reset" type="button">전체 보기</button>
+      </div>
+    </div>
+    <div class="legend" id="layer-legend" style="padding: 0 16px 6px"></div>
+    <div id="map"><svg role="img" aria-label="전북 고속도로 233개 구간과 RWIS 관측소 지도"></svg><div class="tooltip" id="map-tip" hidden></div></div>
+    <div class="map-foot"><span>휠·두 손가락으로 확대, 끌어서 이동, 구간을 누르면 아래에 자세히 보입니다.</span><span id="scale-label"></span></div>
+  </section>
+
+  <section class="grid2">
+    <article class="card panel" aria-label="선택한 구간">
+      <div class="panel-head">
+        <h2>선택한 구간</h2>
+        <select id="seg-pick" aria-label="구간 선택"></select>
+      </div>
+      <div id="detail"></div>
+    </article>
+    <article class="card panel" aria-label="노선 띠 그림">
+      <div class="panel-head">
+        <h2>노선 띠 그림 <span class="meta-line" style="font-weight:400">노선 거리 × 시각</span></h2>
+        <div class="strip-tools">
+          <select id="route-pick" aria-label="노선"></select>
+          <div class="seg-btns" role="group" aria-label="기간">
+            <button type="button" data-days="3" aria-pressed="true">3일</button>
+            <button type="button" data-days="7" aria-pressed="false">7일</button>
+          </div>
+        </div>
+      </div>
+      <div class="chart-legend" id="strip-legend"></div>
+      <div class="strip-wrap" id="strip"><canvas id="strip-canvas"></canvas><svg id="strip-svg"></svg><div class="tooltip" id="strip-tip" hidden></div></div>
+      <p class="note">위 띠는 구간별 위험 등급, 그 아래 선은 구간 중간점 표고입니다. 가로는 노선 남쪽 끝에서 잰 거리(구간 사이 빈틈 포함), 세로는 위에서 아래로 시각입니다. 칸을 누르면 그 구간과 시각을 고릅니다.</p>
+    </article>
+  </section>
+
+  <details class="card table-view" id="table-view">
+    <summary>표로 보기 (233개 구간, 지금 고른 시각의 값)</summary>
+    <div class="table-scroll"><table id="seg-table"><thead></thead><tbody></tbody></table></div>
+  </details>
+
+  <footer id="notes"></footer>
+  <p id="error" role="alert" hidden></p>
+</main>
+</div>
+<script>__D3_SOURCE__</script>
+<script>
+"use strict";
+// build_risk_map.py가 bundle/의 자료를 아래 객체로 넣습니다. 배열은 gzip을 base64로 담았습니다.
+const ATLAS = __ATLAS_DATA__;
+
+(async () => {
+  const root = document.getElementById("atlas");
+  // 주소 뒤 #mode=state&t=2025-01-28T06&seg=TD-014&theme=dark 로 같은 화면을 다시 열 수 있다
+  const hashQ = new URLSearchParams(location.hash.slice(1));
+  if (["light", "dark"].includes(hashQ.get("theme"))) document.documentElement.dataset.theme = hashQ.get("theme");
+  const meta = ATLAS.meta, criteria = ATLAS.criteria;
+  const segs = ATLAS.segments.features;
+  const stations = ATLAS.stations;
+  const NS = segs.length, NH = meta.time.n_hours, NST = stations.length;
+  const GRADES = ["관심", "주의", "경계", "심각"];
+  const GRADE_TOKEN = { "관심": "--good", "주의": "--warning", "경계": "--serious", "심각": "--critical" };
+  const STATE_TOKEN = ["--state-none", "--warning", "--serious", "--critical"];
+  const STATE_LABEL = ["조건 미충족", "결빙 가능 조건", "모델 예측만", "결빙 가능 조건 + 모델 예측"];
+  const ROAD_STATE = { 1: "Dry 건조", 2: "Wet 젖음", 3: "Snow 눈", 4: "Ice 얼음", 10: "저시정", 11: "물 고임",
+    12: "제빙제, 결빙 안 됨", 13: "제빙제, 결빙 시작", 14: "Damp 습윤", 15: "물·얼음 판별 불가" };
+  const RELATED = new Set(criteria.model_prediction.label_states);
+  const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
+  const $ = id => document.getElementById(id);
+  const token = name => getComputedStyle(root).getPropertyValue(name).trim();
+
+  function node(tag, props = {}, text) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === "style") e.style.cssText = v; else if (k === "class") e.className = v; else e.setAttribute(k, v);
+    }
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  // ---------- 1. 자료 풀기 ----------
+  async function gunzip(b64) {
+    const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    if (typeof DecompressionStream === "undefined") throw new Error("이 브라우저는 압축 해제를 지원하지 않습니다. 최신 Chrome·Edge·Firefox·Safari로 여세요.");
+    const stream = new Blob([bin]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  const littleEndian = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+  function int16(bytes) {
+    if (littleEndian) return new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+    const view = new DataView(bytes.buffer), out = new Int16Array(bytes.byteLength / 2);
+    for (let i = 0; i < out.length; i++) out[i] = view.getInt16(i * 2, true);
+    return out;
+  }
+  const raw = ATLAS.arrays;
+  const [rstB, pB, stB, srB, ssB] = await Promise.all(
+    [raw.rst, raw.p_icing, raw.state, raw.station_rst, raw.station_state].map(gunzip));
+  const RST = int16(rstB), P = pB, STATE = stB, SRST = int16(srB), SSTATE = ssB;
+  const pScale = meta.scales.p_icing.multiply;
+  const rstAt = (h, s) => { const v = RST[h * NS + s]; return v === -32768 ? NaN : v / 10; };
+  const pAt = (h, s) => { const v = P[h * NS + s]; return v === 255 ? NaN : v * pScale; };
+  const stateAt = (h, s) => { const v = STATE[h * NS + s]; return v === 255 ? null : v; };
+  const obsRstAt = (h, j) => { const v = SRST[h * NST + j]; return v === -32768 ? NaN : v / 10; };
+  const obsStateAt = (h, j) => { const v = SSTATE[h * NST + j]; return v === 0 ? null : v; };
+
+  // ---------- 2. 시간축 (KST 벽시계를 UTC 숫자로 다룬다) ----------
+  const periods = meta.time.periods.map(p => ({ start: Date.parse(p.start + ":00Z"), hours: p.hours }));
+  function timeOf(h) {
+    let off = h;
+    for (const p of periods) { if (off < p.hours) return p.start + off * 3600e3; off -= p.hours; }
+    return NaN;
+  }
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = ms => { const d = new Date(ms); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+  const hm = ms => { const d = new Date(ms); return `${pad(d.getUTCHours())}:00`; };
+  const weekday = ms => WEEK[new Date(ms).getUTCDay()];
+  const days = [];
+  { let base = 0;
+    periods.forEach((p, i) => {
+      for (let k = 0; k < p.hours / 24; k++) days.push({ h0: base + k * 24, ms: p.start + k * 864e5, winter: i });
+      base += p.hours;
+    }); }
+  const dayIndexOf = h => Math.floor(h / 24);  // 기간마다 하루 24시간이 그대로 이어진다
+  function hourIndexOf(ms) {
+    let base = 0;
+    for (const p of periods) {
+      const k = Math.round((ms - p.start) / 3600e3);
+      if (k >= 0 && k < p.hours) return base + k;
+      base += p.hours;
+    }
+    return -1;
+  }
+  function periodBounds(h) {  // h가 속한 겨울의 [첫 시각, 마지막 시각] 번호
+    let base = 0;
+    for (const p of periods) { if (h < base + p.hours) return [base, base + p.hours - 1]; base += p.hours; }
+    return [0, NH - 1];
+  }
+
+  // ---------- 3. 색 ----------
+  let tempScale, gradeColor, stateColor;
+  function readColors() {
+    const cold = token("--div-cold"), mid = token("--div-mid"), warm = token("--div-warm");
+    tempScale = d3.scaleDiverging([-8, 0, 8], t => t < .5 ? d3.interpolateLab(cold, mid)(t * 2)
+      : d3.interpolateLab(mid, warm)((t - .5) * 2)).clamp(true);
+    gradeColor = g => token(GRADE_TOKEN[g]);
+    stateColor = s => s === null ? token("--grid") : token(STATE_TOKEN[s]);
+  }
+  readColors();
+  const GRADE_WIDTH = { "관심": 3, "주의": 4, "경계": 5, "심각": 6 };
+  const STATE_WIDTH = [3, 5, 5, 6];
+
+  // ---------- 4. 화면 상태 ----------
+  const segIndex = new Map(segs.map((f, i) => [f.properties.seg_id, i]));
+  const stnIndex = new Map(stations.map((s, j) => [s.stn, j]));
+  const view = { mode: "grade", hour: 0, seg: 0, route: null, days: 3, layers: new Set(["bridge", "tunnel", "station", "vuln"]) };
+  // 가장 넓게 예측된 사례일의 가장 넓은 시각, 총점이 가장 높은 구간으로 시작한다
+  const firstEvent = [...meta.event_days].sort((a, b) => b.segments_predicted - a.segments_predicted)[0];
+  function busiestHour(dayIdx) {
+    let best = days[dayIdx].h0 + 6, bestN = -1;
+    for (let h = days[dayIdx].h0; h < days[dayIdx].h0 + 24; h++) {
+      let n = 0;
+      for (let s = 0; s < NS; s++) { const v = stateAt(h, s); if (v !== null && v > 0) n += v === 3 ? 2 : 1; }
+      if (n > bestN) { bestN = n; best = h; }
+    }
+    return best;
+  }
+  const dayByDate = new Map(days.map((d, i) => [ymd(d.ms), i]));
+  view.hour = firstEvent ? busiestHour(dayByDate.get(firstEvent.date)) : 6;
+  view.seg = segs.reduce((best, f, i) => f.properties.score > segs[best].properties.score ? i : best, 0);
+  if (["grade", "rst", "state"].includes(hashQ.get("mode"))) view.mode = hashQ.get("mode");
+  if (hashQ.get("t")) {
+    const t = hashQ.get("t"), h = hourIndexOf(Date.parse((t.length === 13 ? t + ":00" : t) + ":00Z"));
+    if (h >= 0) view.hour = h;
+  }
+  if (segIndex.has(hashQ.get("seg"))) view.seg = segIndex.get(hashQ.get("seg"));
+  view.route = segs[view.seg].properties.route;
+  function writeHash() {
+    const ms = timeOf(view.hour), q = new URLSearchParams({ mode: view.mode, t: `${ymd(ms)}T${hm(ms).slice(0, 2)}`,
+      seg: segs[view.seg].properties.seg_id });
+    if (document.documentElement.dataset.theme) q.set("theme", document.documentElement.dataset.theme);
+    try { history.replaceState(null, "", "#" + q.toString()); } catch (e) { /* 일부 환경은 file:// 주소 변경을 막는다 */ }
+  }
+
+  // ---------- 5. 머리말·숫자 카드 ----------
+  const p0 = periods[0], pl = periods[periods.length - 1];
+  $("subtitle").textContent = `${meta.routes.join("·")} ${NS}개 구간(약 ${meta.segment_length_m / 1000}km)의 기상학적 결빙 위험도와 ` +
+    `${ymd(p0.start).slice(0, 7)}~${ymd(pl.start + (pl.hours - 1) * 3600e3).slice(0, 7)} 겨울철 시간별 추정값. ` +
+    "실제 결빙 여부가 아니라 결빙이 생기기 쉬운 정도를 나타냅니다.";
+  const tiles = $("tiles");
+  criteria.grades.forEach(g => {
+    const t = node("div", { class: "card tile" });
+    const lab = node("div", { class: "tile-label" });
+    const key = node("span", { class: "key box", "data-grade": g.grade });
+    lab.append(key, document.createTextNode(`${g.grade} 등급`));
+    const val = node("div", { class: "tile-value" }, String(meta.grade_counts[g.grade]));
+    val.append(node("small", {}, "구간"));
+    t.append(lab, val, node("div", { class: "tile-note" }, `총점 ${g.range} · ${g.meaning}`));
+    tiles.append(t);
+  });
+  {
+    const perf = meta.performance.road_temperature.holdout.find(r => r.stn === "mean");
+    const t = node("div", { class: "card tile" });
+    t.append(node("div", { class: "tile-label" }, "검증 지점 노면온도 추정 오차"),
+      node("div", { class: "tile-value" }, `${perf.MAE.toFixed(2)}°C`),
+      node("div", { class: "tile-note" }, `학습에서 뺀 3곳 평균 MAE (RMSE ${perf.RMSE.toFixed(2)}°C, BIAS ${perf.BIAS.toFixed(2)}°C)`));
+    tiles.append(t);
+  }
+  function paintTileKeys() { document.querySelectorAll("[data-grade]").forEach(k => k.style.background = gradeColor(k.dataset.grade)); }
+  paintTileKeys();
+
+  // ---------- 6. 날짜·시각 선택 ----------
+  const datePick = $("date-pick");
+  const winterLabel = i => { const y = new Date(periods[i].start).getUTCFullYear(); return `${y}~${y + 1} 겨울`; };
+  const eventDates = new Set(meta.event_days.map(e => e.date));
+  periods.forEach((_, i) => {
+    const og = node("optgroup", { label: winterLabel(i) });
+    days.forEach((d, k) => {
+      if (d.winter !== i) return;
+      const label = `${ymd(d.ms)} (${weekday(d.ms)})${eventDates.has(ymd(d.ms)) ? " · 주요 사례" : ""}`;
+      og.append(node("option", { value: String(k) }, label));
+    });
+    datePick.append(og);
+  });
+  const events = $("events");
+  meta.event_days.forEach(e => {
+    const b = node("button", { type: "button", class: "chip", "data-date": e.date, "aria-pressed": "false",
+      title: `예측 ${e.segments_predicted}구간 · 결빙관련 노면 관측 ${e.stations_related_observed}곳(Ice ${e.stations_ice_observed}곳)` },
+    `${e.date.slice(2)} · 예측 ${e.segments_predicted}구간 · 관측 ${e.stations_related_observed}곳`);
+    b.onclick = () => { stopPlay(); setHour(busiestHour(dayByDate.get(e.date))); };
+    events.append(b);
+  });
+  $("hour").oninput = ev => setHour(days[dayIndexOf(view.hour)].h0 + Number(ev.target.value));
+  datePick.onchange = ev => setHour(days[Number(ev.target.value)].h0 + (view.hour % 24));
+  $("prev-hour").onclick = () => setHour(Math.max(0, view.hour - 1));
+  $("next-hour").onclick = () => setHour(Math.min(NH - 1, view.hour + 1));
+  let playTimer = null;
+  function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $("play").setAttribute("aria-pressed", "false"); $("play").textContent = "재생"; }
+  $("play").onclick = () => {
+    if (playTimer) { stopPlay(); return; }
+    if (view.mode === "grade") setMode("state");
+    $("play").setAttribute("aria-pressed", "true"); $("play").textContent = "멈춤";
+    playTimer = setInterval(() => { if (view.hour >= NH - 1) stopPlay(); else setHour(view.hour + 1); }, 650);
+  };
+
+  function setHour(h) {
+    view.hour = Math.max(0, Math.min(NH - 1, h));
+    const d = dayIndexOf(view.hour), ms = timeOf(view.hour);
+    datePick.value = String(d);
+    $("hour").value = String(view.hour % 24);
+    $("now").textContent = `${ymd(ms)} (${weekday(ms)}) ${hm(ms)} KST`;
+    events.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.date === ymd(ms))));
+    paintMap();
+    renderDetail();
+    renderStrip(false);
+    if ($("table-view").open) renderTable();
+    writeHash();
+  }
+
+  // ---------- 7. 지도 ----------
+  const svg = d3.select("#map svg");
+  const tip = $("map-tip");
+  let projection, path, mapLayer, transform = d3.zoomIdentity, width = 0, height = 0, zoom;
+  const facilities = ATLAS.facilities.features;
+  const vulnerable = ATLAS.vulnerable ? ATLAS.vulnerable.features : [];
+  if (vulnerable.length) $("vuln-toggle").hidden = false;
+
+  function drawMap() {
+    width = $("map").clientWidth || 900;
+    height = Math.max(440, Math.min(720, width * .78));
+    svg.attr("viewBox", `0 0 ${width} ${height}`).attr("height", height);
+    svg.selectAll("*").remove();
+    const focus = { type: "FeatureCollection", features: ATLAS.geo.features.filter(f => String(f.properties.code).startsWith("35")) };
+    projection = d3.geoMercator().fitExtent([[18, 18], [width - 18, height - 18]], focus);
+    path = d3.geoPath(projection);
+    mapLayer = svg.append("g");
+    mapLayer.append("g").selectAll("path").data(ATLAS.geo.features).join("path")
+      .attr("class", f => "region" + (String(f.properties.code).startsWith("35") ? " main" : "")).attr("d", path);
+    const cities = focus.features.filter(f => f.properties.name !== "전주시덕진구");
+    mapLayer.append("g").selectAll("text").data(cities).join("text")
+      .attr("class", "city").attr("text-anchor", "middle")
+      .attr("transform", f => `translate(${path.centroid(f)})`)
+      .text(f => f.properties.name.replace("전주시완산구", "전주"));
+    mapLayer.append("g").attr("class", "layer-vuln").selectAll("path").data(vulnerable).join("path")
+      .attr("class", "vuln").attr("d", path).attr("stroke-width", 16);
+    mapLayer.append("g").selectAll("path").data(segs).join("path").attr("class", "seg-casing").attr("d", path);
+    mapLayer.append("g").attr("class", "layer-tunnel").selectAll("path").data(facilities.filter(f => f.properties.kind === "tunnel"))
+      .join("path").attr("class", "tunnel").attr("d", path).attr("stroke-width", 11);
+    mapLayer.append("g").attr("class", "layer-bridge").selectAll("path").data(facilities.filter(f => f.properties.kind === "bridge"))
+      .join("path").attr("class", "bridge").attr("d", path).attr("stroke-width", 10);
+    mapLayer.append("g").attr("class", "layer-lines").selectAll("path").data(segs).join("path").attr("class", "seg-line").attr("d", path);
+    mapLayer.append("g").selectAll("path").data(segs).join("path").attr("class", "seg-hit").attr("d", path)
+      .on("pointermove", (ev, f) => showSegTip(ev, segIndex.get(f.properties.seg_id)))
+      .on("pointerleave", () => { tip.hidden = true; })
+      .on("click", (ev, f) => { selectSeg(segIndex.get(f.properties.seg_id)); });
+    mapLayer.append("path").attr("class", "sel-ring").attr("id", "sel-ring");
+    const st = mapLayer.append("g").attr("class", "layer-station");
+    stations.forEach((s, j) => { s.xy = projection([s.lon, s.lat]); s.j = j; });
+    st.selectAll("path.station-ring").data(stations).join("path").attr("class", "station-ring");
+    st.selectAll("path.station").data(stations).join("path").attr("class", "station")
+      .on("pointermove", (ev, s) => showStationTip(ev, s))
+      .on("pointerleave", () => { tip.hidden = true; })
+      .on("click", (ev, s) => { const i = segIndex.get(s.seg_id); if (i !== undefined) selectSeg(i); });
+    svg.append("text").attr("class", "orientation").attr("x", width - 22).attr("y", 22).attr("text-anchor", "end").text("N ↑");
+
+    zoom = d3.zoom().extent([[0, 0], [width, height]]).scaleExtent([1, 14]).clickDistance(5)
+      .on("zoom", ev => {
+        transform = ev.transform;
+        mapLayer.attr("transform", transform);
+        placeStations();
+        mapLayer.selectAll(".city").style("font-size", `${12 / transform.k}px`).style("stroke-width", `${3 / transform.k}px`);
+        const a = projection.invert(transform.invert([width / 2 - 50, height / 2]));
+        const b = projection.invert(transform.invert([width / 2 + 50, height / 2]));
+        $("scale-label").textContent = `화면 100px ≈ ${(d3.geoDistance(a, b) * 6371.0088).toFixed(1)}km`;
+      });
+    svg.call(zoom).call(zoom.transform, transform);
+    paintMap();
+  }
+
+  function placeStations() {
+    const k = transform.k;
+    mapLayer.selectAll("path.station").attr("transform", s => `translate(${s.xy}) scale(${1 / k})`)
+      .attr("d", s => d3.symbol().type(s.holdout ? d3.symbolDiamond : d3.symbolSquare).size(s.holdout ? 150 : 95)());
+    mapLayer.selectAll("path.station-ring").attr("transform", s => `translate(${s.xy}) scale(${1 / k})`)
+      .attr("d", s => d3.symbol().type(s.holdout ? d3.symbolDiamond : d3.symbolSquare).size(s.holdout ? 330 : 240)());
+  }
+
+  function segStyle(i) {
+    const f = segs[i].properties;
+    if (view.mode === "grade") return { color: gradeColor(f.grade), w: GRADE_WIDTH[f.grade] };
+    if (view.mode === "rst") { const v = rstAt(view.hour, i); return { color: isNaN(v) ? token("--grid") : tempScale(v), w: 5 }; }
+    const s = stateAt(view.hour, i);
+    return { color: stateColor(s), w: s === null ? 3 : STATE_WIDTH[s] };
+  }
+
+  function stationFill(s) {
+    if (view.mode === "grade") return token("--station");
+    if (view.mode === "rst") { const v = obsRstAt(view.hour, s.j); return isNaN(v) ? token("--surface") : tempScale(v); }
+    const st = obsStateAt(view.hour, s.j);
+    return st === null ? token("--surface") : RELATED.has(st) ? token("--critical") : token("--state-none");
+  }
+
+  function paintMap() {
+    if (!mapLayer) return;
+    const styles = segs.map((_, i) => segStyle(i));
+    mapLayer.selectAll("path.seg-line").attr("stroke", (f, i) => styles[i].color).attr("stroke-width", (f, i) => styles[i].w);
+    mapLayer.selectAll("path.seg-casing").attr("stroke-width", (f, i) => styles[i].w + 2.5);
+    mapLayer.select(".layer-bridge").attr("display", view.layers.has("bridge") ? null : "none");
+    mapLayer.select(".layer-tunnel").attr("display", view.layers.has("tunnel") ? null : "none");
+    mapLayer.select(".layer-vuln").attr("display", view.layers.has("vuln") ? null : "none");
+    const showSt = view.layers.has("station");
+    mapLayer.select(".layer-station").attr("display", showSt ? null : "none");
+    mapLayer.selectAll("path.station").attr("fill", stationFill)
+      .attr("stroke", s => (view.mode !== "grade" && isNaN(obsRstAt(view.hour, s.j)) && obsStateAt(view.hour, s.j) === null) ? token("--muted") : token("--surface"));
+    mapLayer.selectAll("path.station-ring").attr("display", s => {
+      if (view.mode === "grade") return "none";
+      const st = obsStateAt(view.hour, s.j);
+      return st !== null && RELATED.has(st) ? null : "none";
+    });
+    placeStations();
+    mapLayer.select("#sel-ring").attr("d", path(segs[view.seg])).attr("stroke-width", styles[view.seg].w + 7)
+      .attr("stroke", token("--ink")).attr("stroke-opacity", .35);
+    renderLegend();
+  }
+
+  function tipRows(rows) {
+    tip.replaceChildren();
+    rows.forEach(([cls, text, color]) => {
+      const r = node("div", { class: "row" + (cls ? " " + cls : "") });
+      if (color) r.append(node("span", { class: "key", style: `background:${color}` }));
+      if (cls === "head") r.append(node("strong", {}, text)); else r.append(document.createTextNode(text));
+      tip.append(r);
+    });
+  }
+  function moveTip(el, ev, host) {
+    const box = host.getBoundingClientRect();
+    el.hidden = false;
+    let x = ev.clientX - box.left + 14, y = ev.clientY - box.top + 14;
+    if (x + el.offsetWidth > box.width) x = ev.clientX - box.left - el.offsetWidth - 14;
+    if (y + el.offsetHeight > box.height) y = ev.clientY - box.top - el.offsetHeight - 14;
+    el.style.left = `${Math.max(0, x)}px`; el.style.top = `${Math.max(0, y)}px`;
+  }
+  const fmtT = v => isNaN(v) ? "자료 없음" : `${v.toFixed(1)}°C`;
+  function showSegTip(ev, i) {
+    const f = segs[i].properties, s = stateAt(view.hour, i);
+    const rows = [["head", view.mode === "grade" ? `${f.grade} · 총점 ${f.score.toFixed(2)}` :
+      view.mode === "rst" ? `추정 노면온도 ${fmtT(rstAt(view.hour, i))}` : (s === null ? "자료 없음" : STATE_LABEL[s])],
+    ["sub", `${f.seg_id} · ${f.route} ${f.km_from.toFixed(1)}~${f.km_to.toFixed(1)}km · ${f.sigungu}`]];
+    if (view.mode !== "grade") rows.push(["sub", `${ymd(timeOf(view.hour))} ${hm(timeOf(view.hour))} · 등급 ${f.grade}`]);
+    tipRows(rows);
+    moveTip(tip, ev, $("map"));
+  }
+  function showStationTip(ev, s) {
+    const rows = [["head", `${s.name} ${s.holdout ? "(검증 지점)" : ""}`], ["sub", `RWIS ${s.stn} · ${s.route} · ${s.kind} · 구간 ${s.seg_id}`]];
+    if (view.mode !== "grade") {
+      const st = obsStateAt(view.hour, s.j);
+      rows.push(["", `실측 노면온도 ${fmtT(obsRstAt(view.hour, s.j))}`]);
+      rows.push(["", `노면상태 ${st === null ? "자료 없음" : (ROAD_STATE[st] || st)}`]);
+    }
+    tipRows(rows);
+    moveTip(tip, ev, $("map"));
+  }
+
+  function legendItem(host, keyStyle, label, cls = "key") {
+    const it = node("span", { class: "legend-item" });
+    it.append(node("span", { class: cls, style: keyStyle }), document.createTextNode(label));
+    host.append(it);
+  }
+  function renderLegend() {
+    const lg = $("legend");
+    lg.replaceChildren();
+    if (view.mode === "grade") {
+      lg.append(node("span", { class: "legend-title" }, "위험 등급"));
+      GRADES.forEach(g => legendItem(lg, `background:${gradeColor(g)};height:${GRADE_WIDTH[g]}px`, `${g} ${meta.grade_counts[g]}`));
+      lg.append(node("span", {}, "선이 굵을수록 높은 등급 · 두 겨울 전체 기준이라 시각과 관계없음"));
+    } else if (view.mode === "rst") {
+      lg.append(node("span", { class: "legend-title" }, "추정 노면온도"));
+      const w = 220, h = 34, sv = d3.select(lg).append("svg").attr("width", w).attr("height", h).attr("aria-label", "노면온도 색 척도 -8~8°C");
+      const gid = "grad-" + Math.random().toString(36).slice(2);
+      const grad = sv.append("defs").append("linearGradient").attr("id", gid);
+      d3.range(0, 1.0001, .1).forEach(t => grad.append("stop").attr("offset", t).attr("stop-color", tempScale(-8 + 16 * t)));
+      sv.append("rect").attr("x", 6).attr("y", 4).attr("width", w - 12).attr("height", 10).attr("rx", 3).attr("fill", `url(#${gid})`);
+      const x = d3.scaleLinear([-8, 8], [6, w - 6]);
+      [-8, -4, 0, 4, 8].forEach(v => {
+        sv.append("line").attr("x1", x(v)).attr("x2", x(v)).attr("y1", 14).attr("y2", 18).attr("stroke", token("--axis"));
+        sv.append("text").attr("x", x(v)).attr("y", 30).attr("text-anchor", "middle").attr("fill", token("--muted"))
+          .attr("font-size", 11).text(v === 8 ? "≥8" : v === -8 ? "≤-8" : String(v));
+      });
+      sv.append("line").attr("x1", x(1)).attr("x2", x(1)).attr("y1", 2).attr("y2", 16).attr("stroke", token("--ink")).attr("stroke-width", 1.5);
+      lg.append(node("span", {}, "검은 눈금 1°C = 결빙 가능 조건의 노면온도 기준. 관측소 칸은 같은 척도의 실측값"));
+    } else {
+      lg.append(node("span", { class: "legend-title" }, "결빙 가능 조건"));
+      [0, 1, 3, 2].forEach(s => legendItem(lg, `background:${stateColor(s)};height:${STATE_WIDTH[s]}px`, STATE_LABEL[s]));
+      lg.append(node("span", {}, "조건 미충족은 안전 판정이 아님"));
+    }
+    const ll = $("layer-legend");
+    ll.replaceChildren();
+    ll.append(node("span", { class: "legend-title" }, "층"));
+    legendItem(ll, `background:${token("--ink")};height:6px;width:14px;border-radius:0`, "교량 구간(국토부 경계)");
+    legendItem(ll, `background:repeating-linear-gradient(90deg,${token("--ink")} 0 3px,transparent 3px 6px);height:6px;width:18px;border-radius:0`, "터널 구간");
+    legendItem(ll, `background:${token("--station")};width:9px;height:9px;border-radius:1px`, "RWIS 관측소", "key box");
+    legendItem(ll, `background:${token("--station")};width:9px;height:9px;transform:rotate(45deg);border-radius:1px`, "검증 지점(학습 제외)", "key box");
+    if (view.mode !== "grade") legendItem(ll, `background:transparent;border:2.5px solid ${token("--critical")};width:12px;height:12px`, "결빙관련 노면 관측(눈·얼음 등)", "key box");
+    if (vulnerable.length) legendItem(ll, `background:${token("--band")};height:10px;width:18px`, "상습 결빙구간(행정안전부)");
+  }
+
+  document.querySelectorAll(".controls .seg-btns button[data-mode]").forEach(b => { b.onclick = () => setMode(b.dataset.mode); });
+  function setMode(mode) {
+    view.mode = mode;
+    document.querySelectorAll("button[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+    paintMap(); renderStrip(true); if ($("table-view").open) renderTable();
+    writeHash();
+  }
+  document.querySelectorAll("input[data-layer]").forEach(c => {
+    c.onchange = () => { c.checked ? view.layers.add(c.dataset.layer) : view.layers.delete(c.dataset.layer); paintMap(); };
+  });
+  $("zoom-in").onclick = () => svg.transition().duration(200).call(zoom.scaleBy, 1.6);
+  $("zoom-out").onclick = () => svg.transition().duration(200).call(zoom.scaleBy, 1 / 1.6);
+  $("zoom-reset").onclick = () => svg.transition().duration(250).call(zoom.transform, d3.zoomIdentity);
+
+  // ---------- 8. 구간 선택·상세 ----------
+  const segPick = $("seg-pick");
+  meta.routes.forEach(r => {
+    const og = node("optgroup", { label: r });
+    segs.forEach((f, i) => { if (f.properties.route === r) og.append(node("option", { value: String(i) },
+      `${f.properties.seg_id} · ${f.properties.grade} · ${f.properties.sigungu}`)); });
+    segPick.append(og);
+  });
+  segPick.onchange = () => selectSeg(Number(segPick.value), true);
+
+  function selectSeg(i, pan = false) {
+    view.seg = i;
+    segPick.value = String(i);
+    if (segs[i].properties.route !== view.route) { view.route = segs[i].properties.route; $("route-pick").value = view.route; renderStrip(true); }
+    else renderStrip(false);
+    paintMap(); renderDetail(); writeHash();
+    if (pan && zoom) {
+      const f = segs[i].properties, xy = projection([f.lon, f.lat]), k = Math.max(transform.k, 3);
+      svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(k).translate(-xy[0], -xy[1]));
+    }
+  }
+
+  const INDICATOR_VALUE = {
+    M1: v => `${v.icing_cond_hours.toFixed(0)}시간/겨울`, M2: v => `${v.icing_pred_hours.toFixed(1)}시간/겨울`,
+    R1: v => `교량 ${(v.bridge_ratio * 100).toFixed(0)}%`,
+    R2: v => v.tunnel_ratio >= .9 ? "터널 안" : `터널까지 ${v.seg_dist_tunnel >= 1000 ? (v.seg_dist_tunnel / 1000).toFixed(1) + "km" : v.seg_dist_tunnel.toFixed(0) + "m"}`,
+    T1: v => `${v.elev.toFixed(0)}m`, T2: v => `${(v.shade_winter * 100).toFixed(1)}%`,
+    T3: v => `하천 ${v.dist_river.toFixed(0)}m · TPI ${v.tpi.toFixed(0)}m`,
+  };
+
+  function renderDetail() {
+    const host = $("detail");
+    host.replaceChildren();
+    const f = segs[view.seg].properties, v = f.values;
+    const gm = criteria.grades.find(g => g.grade === f.grade);
+    host.append(node("div", { class: "meta-line" }, `${f.seg_id} · ${f.route} ${f.km_from.toFixed(1)}~${f.km_to.toFixed(1)}km · ${f.sigungu} · 길이 ${(f.length_m / 1000).toFixed(2)}km`));
+    const badge = node("div", { class: "grade-badge" });
+    badge.append(node("span", { class: "key box", style: `background:${gradeColor(f.grade)};width:14px;height:14px` }),
+      node("b", {}, f.grade), document.createTextNode(`총점 ${f.score.toFixed(2)} / 4 · ${gm.meaning}`));
+    host.append(badge);
+    const meters = node("div", { class: "meters", "aria-label": "요인 점수 (1~4)" });
+    [["기상", f.s_meteo], ["도로", f.s_road], ["지형", f.s_terrain]].forEach(([name, val]) => {
+      const m = node("div", { class: "meter", role: "img", "aria-label": `${name} ${val.toFixed(2)}점 (1~4)` });
+      m.append(node("i", { style: `width:${(val / 4) * 100}%` }));
+      meters.append(node("span", {}, name), m, node("span", { class: "val" }, val.toFixed(2)));
+    });
+    host.append(meters);
+    host.append(node("div", { class: "note", style: "margin-top:0" }, `총점 = ${criteria.weights["기상"]} × 기상 + ${criteria.weights["도로"]} × 도로 + ${criteria.weights["지형"]} × 지형 (기상: M1·M2 평균, 도로: R1·R2 중 큰 값, 지형: T1·T2·T3 평균)`));
+
+    const table = node("table", { "aria-label": "하위 지표" });
+    const thead = node("thead"); const hr = node("tr");
+    ["지표", "이 구간의 값", "수준"].forEach((t, k) => hr.append(node("th", k === 2 ? { class: "num" } : {}, t)));
+    thead.append(hr); table.append(thead);
+    const tb = node("tbody");
+    criteria.indicators.forEach(ind => {
+      const tr = node("tr"), lv = f.levels[ind.code];
+      const name = node("td"); name.append(node("div", {}, `${ind.code} ${ind.name}`));
+      const basis = node("div", { class: "basis" }, `수준: ${ind.levels.filter(Boolean).map((x, k) => `${k + 1}) ${x}`).join("  ")}`);
+      name.append(basis);
+      const pips = node("span", { class: "pips", role: "img", "aria-label": `수준 ${lv}` });
+      for (let k = 1; k <= 4; k++) pips.append(node("i", { class: k <= lv ? "on" : "" }));
+      const lvCell = node("td", { class: "num" }); lvCell.append(pips, document.createTextNode(` ${lv}`));
+      tr.append(name, node("td", {}, INDICATOR_VALUE[ind.code](v)), lvCell);
+      tb.append(tr);
+    });
+    table.append(tb);
+    host.append(table);
+    renderSeriesChart(host);
+  }
+
+  // 선택 구간의 72시간 노면온도: 추정(구간) + 실측(그 구간의 관측소) + 결빙 가능 조건·모델 예측 띠
+  function renderSeriesChart(host) {
+    const f = segs[view.seg].properties;
+    const dayIdx = dayIndexOf(view.hour);
+    const [periodStart, periodEnd] = periodBounds(view.hour);
+    const h0 = Math.max(periodStart, days[dayIdx].h0 - 24), h1 = Math.min(periodEnd, days[dayIdx].h0 + 47);
+    const stn = f.stations.length ? stations[stnIndex.get(f.stations[0])] : null;
+    host.append(node("div", { class: "chart-title" }, `노면온도 ${ymd(timeOf(h0))} ~ ${ymd(timeOf(h1))}`));
+    const lg = node("div", { class: "chart-legend" });
+    legendItem(lg, `background:${token("--series-1")};height:2px`, "추정 노면온도(이 구간)");
+    if (stn) legendItem(lg, `background:${token("--series-2")};height:2px`, `실측 노면온도(${stn.name}${stn.holdout ? ", 검증 지점" : ""})`);
+    legendItem(lg, `background:${token("--warning")};opacity:.45;height:10px;width:12px`, "결빙 가능 조건", "key box");
+    legendItem(lg, `background:${token("--critical")};height:5px;width:12px;border-radius:1px`, "모델 예측", "key box");
+    host.append(lg);
+    const wrap = node("div", { class: "chart" }); host.append(wrap);
+    const W = Math.max(280, wrap.clientWidth || host.clientWidth || 360), H = 190, m = { l: 34, r: 10, t: 8, b: 26 };
+    const hours = d3.range(h0, h1 + 1);
+    const est = hours.map(h => rstAt(h, view.seg));
+    const obs = stn ? hours.map(h => obsRstAt(h, stn.j)) : [];
+    const all = est.concat(obs).filter(x => !isNaN(x));
+    const lo = Math.min(-2, d3.min(all) ?? 0), hi = Math.max(4, d3.max(all) ?? 4);
+    const x = d3.scaleLinear([h0, h1 + 1], [m.l, W - m.r]);
+    const y = d3.scaleLinear([lo, hi], [H - m.b, m.t]).nice();
+    const sv = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H).attr("role", "img")
+      .attr("aria-label", `${f.seg_id} 노면온도 시계열`);
+    sv.append("g").attr("class", "gridline").attr("transform", `translate(${m.l},0)`)
+      .call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(""));
+    hours.forEach(h => {
+      const s = stateAt(h, view.seg);
+      if (s === 1 || s === 3) sv.append("rect").attr("x", x(h)).attr("width", Math.max(1, x(h + 1) - x(h))).attr("y", m.t)
+        .attr("height", H - m.b - m.t).attr("fill", token("--warning")).attr("opacity", .28);
+      if (s === 2 || s === 3) sv.append("rect").attr("x", x(h)).attr("width", Math.max(1, x(h + 1) - x(h))).attr("y", H - m.b - 5)
+        .attr("height", 5).attr("fill", token("--critical"));
+    });
+    sv.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", token("--axis"));
+    const line = d3.line().defined(d => !isNaN(d[1])).x(d => x(d[0] + .5)).y(d => y(d[1])).curve(d3.curveMonotoneX);
+    sv.append("path").attr("d", line(hours.map((h, k) => [h, est[k]]))).attr("fill", "none").attr("stroke", token("--series-1"))
+      .attr("stroke-width", 2).attr("stroke-linejoin", "round").attr("stroke-linecap", "round");
+    if (stn) sv.append("path").attr("d", line(hours.map((h, k) => [h, obs[k]]))).attr("fill", "none").attr("stroke", token("--series-2"))
+      .attr("stroke-width", 2).attr("stroke-linejoin", "round").attr("stroke-linecap", "round");
+    const ticks = hours.filter(h => (h - days[dayIdx].h0) % 12 === 0);
+    sv.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.b})`)
+      .call(d3.axisBottom(x).tickValues(ticks).tickFormat(h => { const ms = timeOf(h); return hm(ms) === "00:00" ? ymd(ms).slice(5) : hm(ms); }).tickSizeOuter(0));
+    sv.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d => `${d}°`).tickSizeOuter(0))
+      .call(g => g.select(".domain").remove());
+    const cur = sv.append("g");
+    cur.append("line").attr("x1", x(view.hour + .5)).attr("x2", x(view.hour + .5)).attr("y1", m.t).attr("y2", H - m.b).attr("stroke", token("--ink")).attr("stroke-width", 1);
+    // 마우스·터치 위치에 가장 가까운 시각으로 붙는 십자선
+    const cross = sv.append("line").attr("y1", m.t).attr("y2", H - m.b).attr("stroke", token("--muted")).attr("display", "none");
+    const dotE = sv.append("circle").attr("r", 4).attr("fill", token("--series-1")).attr("stroke", token("--surface")).attr("stroke-width", 2).attr("display", "none");
+    const dotO = sv.append("circle").attr("r", 4).attr("fill", token("--series-2")).attr("stroke", token("--surface")).attr("stroke-width", 2).attr("display", "none");
+    const ctip = node("div", { class: "tooltip", hidden: "" }); wrap.append(ctip);
+    sv.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", H - m.t - m.b).attr("fill", "transparent")
+      .on("pointermove", ev => {
+        const [px] = d3.pointer(ev);
+        const h = Math.max(h0, Math.min(h1, Math.floor(x.invert(px))));
+        const k = h - h0, cx = x(h + .5);
+        cross.attr("x1", cx).attr("x2", cx).attr("display", null);
+        if (!isNaN(est[k])) dotE.attr("cx", cx).attr("cy", y(est[k])).attr("display", null); else dotE.attr("display", "none");
+        if (stn && !isNaN(obs[k])) dotO.attr("cx", cx).attr("cy", y(obs[k])).attr("display", null); else dotO.attr("display", "none");
+        ctip.replaceChildren();
+        const ms = timeOf(h), s = stateAt(h, view.seg);
+        const r1 = node("div", { class: "row" }); r1.append(node("span", { class: "key", style: `background:${token("--series-1")}` }), node("strong", {}, fmtT(est[k])), document.createTextNode(" 추정"));
+        ctip.append(node("div", { class: "sub" }, `${ymd(ms)} ${hm(ms)}`), r1);
+        if (stn) { const r2 = node("div", { class: "row" }); r2.append(node("span", { class: "key", style: `background:${token("--series-2")}` }), node("strong", {}, fmtT(obs[k])), document.createTextNode(" 실측")); ctip.append(r2); }
+        ctip.append(node("div", { class: "sub" }, s === null ? "상태 자료 없음" : STATE_LABEL[s]));
+        moveTip(ctip, ev, wrap);
+      })
+      .on("pointerleave", () => { cross.attr("display", "none"); dotE.attr("display", "none"); dotO.attr("display", "none"); ctip.hidden = true; })
+      .on("click", ev => { const [px] = d3.pointer(ev); setHour(Math.max(h0, Math.min(h1, Math.floor(x.invert(px))))); });
+    if (!stn) host.append(node("p", { class: "note" }, "이 구간에는 RWIS 관측소가 없어 추정값만 보입니다. 관측소가 있는 구간을 고르면 실측과 비교할 수 있습니다."));
+    else if (!stn.holdout) host.append(node("p", { class: "note" }, "학습 지점이 있는 구간은 그 관측이 주변 RWIS 변수로 추정에 들어가 실측과 가깝게 나옵니다. 독립 비교는 검증 지점(◆) 구간에서 보세요."));
+  }
+
+  // ---------- 9. 노선 띠 그림 ----------
+  const routePick = $("route-pick");
+  meta.routes.forEach(r => routePick.append(node("option", { value: r }, r)));
+  routePick.value = view.route;
+  routePick.onchange = () => { view.route = routePick.value; renderStrip(true); };
+  document.querySelectorAll("button[data-days]").forEach(b => {
+    b.onclick = () => {
+      view.days = Number(b.dataset.days);
+      document.querySelectorAll("button[data-days]").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+      renderStrip(true);
+    };
+  });
+  const strip = { h0: -1, h1: -1, route: null, mode: null, days: 0 };
+  function stripWindow() {
+    const d = dayIndexOf(view.hour), half = Math.floor(view.days / 2);
+    const [base, last] = periodBounds(view.hour);
+    const h0 = Math.max(base, Math.min(last + 1 - view.days * 24, days[d].h0 - half * 24));
+    return [h0, h0 + view.days * 24 - 1];
+  }
+  function renderStrip(force) {
+    const [h0, h1] = stripWindow();
+    const stripMode = view.mode === "state" ? "state" : "rst";
+    const same = !force && strip.route === view.route && strip.mode === stripMode && strip.days === view.days && view.hour >= strip.h0 && view.hour <= strip.h1;
+    if (!same) { Object.assign(strip, { h0, h1, route: view.route, mode: stripMode, days: view.days }); drawStrip(); }
+    drawStripOverlay();
+  }
+  let stripGeo = null;
+  function drawStrip() {
+    const wrap = $("strip"), canvas = $("strip-canvas");
+    const W = Math.max(300, wrap.clientWidth || 600);
+    const idx = segs.map((f, i) => i).filter(i => segs[i].properties.route === strip.route);
+    const maxKm = d3.max(idx, i => segs[i].properties.km_to);
+    const rows = strip.h1 - strip.h0 + 1;
+    const rowH = Math.max(2, Math.min(6, Math.floor(380 / rows)));
+    const m = { l: 58, r: 8, t: 88, b: 26 };
+    const plotH = rows * rowH, H = m.t + plotH + m.b;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    canvas.style.height = `${H}px`;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const x = d3.scaleLinear([0, maxKm], [m.l, W - m.r]);
+    stripGeo = { idx, x, m, rowH, W, H, maxKm };
+    // 시각 x 구간 칸
+    for (let r = 0; r < rows; r++) {
+      const h = strip.h0 + r;
+      for (const i of idx) {
+        const f = segs[i].properties;
+        let c;
+        if (strip.mode === "state") { const s = stateAt(h, i); c = stateColor(s); }
+        else { const v = rstAt(h, i); c = isNaN(v) ? token("--grid") : tempScale(v); }
+        ctx.fillStyle = c;
+        const x0 = x(f.km_from), x1 = x(f.km_to);
+        ctx.fillRect(x0, m.t + r * rowH, Math.max(1, x1 - x0), rowH);
+      }
+    }
+    // 위험 등급 띠와 표고 선
+    for (const i of idx) {
+      const f = segs[i].properties;
+      ctx.fillStyle = gradeColor(f.grade);
+      ctx.fillRect(x(f.km_from), m.t - 14, Math.max(1, x(f.km_to) - x(f.km_from)), 8);
+    }
+    const sv = d3.select("#strip-svg").attr("viewBox", `0 0 ${W} ${H}`).attr("height", H);
+    sv.selectAll("*").remove();
+    const ey = d3.scaleLinear([0, d3.max(idx, i => segs[i].properties.values.elev) * 1.1], [m.t - 30, 8]).nice();
+    sv.append("path").attr("fill", "none").attr("stroke", token("--ink-2")).attr("stroke-width", 1.5)
+      .attr("d", d3.line().x(i => x((segs[i].properties.km_from + segs[i].properties.km_to) / 2)).y(i => ey(segs[i].properties.values.elev))(idx));
+    sv.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(ey).ticks(2).tickFormat(d => `${d}m`).tickSizeOuter(0))
+      .call(g => g.select(".domain").remove());
+    sv.append("text").attr("x", m.l - 6).attr("y", m.t - 7).attr("text-anchor", "end").attr("fill", token("--muted")).attr("font-size", 11).text("등급");
+    // 관측소 위치 (구간 중간 km에 표시)
+    stations.filter(s => segs[segIndex.get(s.seg_id)]?.properties.route === strip.route).forEach(s => {
+      const f = segs[segIndex.get(s.seg_id)].properties, cx = x((f.km_from + f.km_to) / 2);
+      sv.append("path").attr("d", d3.symbol().type(s.holdout ? d3.symbolDiamond : d3.symbolTriangle).size(30)())
+        .attr("transform", `translate(${cx},${m.t - 3}) rotate(${s.holdout ? 0 : 180})`).attr("fill", token("--ink"));
+    });
+    const y = d3.scaleLinear([strip.h0, strip.h1 + 1], [m.t, m.t + plotH]);
+    const yt = d3.range(strip.h0, strip.h1 + 1).filter(h => (h - strip.h0) % 24 === 0 || (view.days <= 3 && (h - strip.h0) % 12 === 0));
+    sv.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
+      .call(d3.axisLeft(y).tickValues(yt).tickFormat(h => { const ms = timeOf(h); return hm(ms) === "00:00" ? `${ymd(ms).slice(5)}` : hm(ms); }).tickSizeOuter(0))
+      .call(g => g.select(".domain").remove());
+    sv.append("g").attr("class", "axis").attr("transform", `translate(0,${m.t + plotH})`)
+      .call(d3.axisBottom(x).ticks(Math.min(10, Math.floor(W / 70))).tickFormat(d => `${d}km`).tickSizeOuter(0));
+    sv.append("g").attr("id", "strip-hl");
+    // 범례
+    const lg = $("strip-legend"); lg.replaceChildren();
+    if (strip.mode === "state") [0, 1, 3, 2].forEach(s => legendItem(lg, `background:${stateColor(s)};width:12px;height:10px`, STATE_LABEL[s], "key box"));
+    else { legendItem(lg, `background:linear-gradient(90deg,${tempScale(-8)},${tempScale(0)},${tempScale(8)});width:60px;height:10px`, "추정 노면온도 -8 ~ 0 ~ 8°C", "key box"); }
+    legendItem(lg, `background:${token("--ink")};width:8px;height:8px;clip-path:polygon(0 0,100% 0,50% 100%)`, "RWIS", "key box");
+    legendItem(lg, `background:${token("--ink")};width:8px;height:8px;transform:rotate(45deg)`, "검증 지점", "key box");
+  }
+  function drawStripOverlay() {
+    if (!stripGeo) return;
+    const { x, m, rowH, W } = stripGeo;
+    const g = d3.select("#strip-hl"); g.selectAll("*").remove();
+    if (view.hour >= strip.h0 && view.hour <= strip.h1) {
+      const yy = m.t + (view.hour - strip.h0) * rowH;
+      g.append("rect").attr("x", m.l).attr("y", yy - 1).attr("width", W - m.l - m.r).attr("height", rowH + 2)
+        .attr("fill", "none").attr("stroke", token("--ink")).attr("stroke-width", 1.5);
+    }
+    const f = segs[view.seg].properties;
+    if (f.route === strip.route) {
+      g.append("rect").attr("x", x(f.km_from) - 1).attr("y", m.t - 16).attr("width", Math.max(3, x(f.km_to) - x(f.km_from) + 2))
+        .attr("height", (strip.h1 - strip.h0 + 1) * rowH + 17).attr("fill", "none").attr("stroke", token("--ink")).attr("stroke-width", 1.5);
+    }
+  }
+  function stripHit(ev) {
+    const { idx, x, m, rowH } = stripGeo;
+    const box = $("strip-canvas").getBoundingClientRect();
+    const px = (ev.clientX - box.left), py = (ev.clientY - box.top);
+    const r = Math.floor((py - m.t) / rowH), km = x.invert(px);
+    if (r < 0 || r > strip.h1 - strip.h0) return null;
+    const i = idx.find(k => km >= segs[k].properties.km_from && km <= segs[k].properties.km_to);
+    return i === undefined ? null : { i, h: strip.h0 + r };
+  }
+  const stripTip = $("strip-tip");
+  $("strip-canvas").addEventListener("pointermove", ev => {
+    const hit = stripHit(ev);
+    if (!hit) { stripTip.hidden = true; return; }
+    const f = segs[hit.i].properties, s = stateAt(hit.h, hit.i), ms = timeOf(hit.h);
+    stripTip.replaceChildren(node("strong", {}, strip.mode === "state" ? (s === null ? "자료 없음" : STATE_LABEL[s]) : fmtT(rstAt(hit.h, hit.i))),
+      node("div", { class: "sub" }, `${f.seg_id} · ${f.km_from.toFixed(1)}km · ${f.grade}`), node("div", { class: "sub" }, `${ymd(ms)} ${hm(ms)}`));
+    moveTip(stripTip, ev, $("strip"));
+  });
+  $("strip-canvas").addEventListener("pointerleave", () => { stripTip.hidden = true; });
+  $("strip-canvas").addEventListener("click", ev => { const hit = stripHit(ev); if (hit) { view.seg = hit.i; segPick.value = String(hit.i); setHour(hit.h); } });
+
+  // ---------- 10. 표 보기 ----------
+  function renderTable() {
+    const t = $("seg-table");
+    const head = t.tHead; head.replaceChildren();
+    const hr = node("tr");
+    ["구간", "노선", "km", "시군", "등급", "총점", "기상", "도로", "지형", "추정 노면온도", "결빙관련 확률", "상태"].forEach((c, k) =>
+      hr.append(node("th", k >= 5 && k <= 10 ? { class: "num", scope: "col" } : { scope: "col" }, c)));
+    head.append(hr);
+    const tb = t.tBodies[0]; tb.replaceChildren();
+    const order = segs.map((f, i) => i).sort((a, b) => segs[b].properties.score - segs[a].properties.score);
+    const frag = document.createDocumentFragment();
+    order.forEach(i => {
+      const f = segs[i].properties, s = stateAt(view.hour, i), p = pAt(view.hour, i);
+      const tr = node("tr");
+      [f.seg_id, f.route, `${f.km_from.toFixed(1)}`, f.sigungu, f.grade].forEach(v => tr.append(node("td", {}, v)));
+      [f.score, f.s_meteo, f.s_road, f.s_terrain].forEach(v => tr.append(node("td", { class: "num" }, v.toFixed(2))));
+      tr.append(node("td", { class: "num" }, fmtT(rstAt(view.hour, i))), node("td", { class: "num" }, isNaN(p) ? "-" : p.toFixed(3)),
+        node("td", {}, s === null ? "자료 없음" : STATE_LABEL[s]));
+      frag.append(tr);
+    });
+    tb.append(frag);
+    t.querySelector("caption")?.remove();
+    t.prepend(node("caption", { style: "text-align:left;color:var(--muted);padding:4px 0" }, `${ymd(timeOf(view.hour))} ${hm(timeOf(view.hour))} KST 기준, 총점 높은 순`));
+  }
+  $("table-view").addEventListener("toggle", () => { if ($("table-view").open) renderTable(); });
+
+  // ---------- 11. 설명·출처 ----------
+  function vulnerableNote() {
+    if (!ATLAS.vulnerableMeta) return "";
+    const v = ATLAS.vulnerableMeta.stats, pct = x => `${(x * 100).toFixed(0)}%`;
+    return `상습 결빙구간 ${v.sections}개(행정안전부)에서 경계·심각 구간 길이 비율은 ${pct(v.length_weighted_high_share)}로 전체 구간 비율 ${pct(v.high_share_all)}보다 높지만, ` +
+      `같은 노선에 같은 길이로 무작위로 놓아도 ${pct(v.random_placement_mean)}입니다(p=${v.random_placement_p}). 차이의 대부분은 노선 구성이며 노선 안에서 상습 구간을 골라내는 힘은 확인되지 않았습니다.`;
+  }
+  function renderNotes() {
+    const n = $("notes"); n.replaceChildren();
+    const sec = (title, items) => { n.append(node("h2", {}, title)); const ul = node("ul"); items.forEach(t => ul.append(node("li", {}, t))); n.append(ul); };
+    const est = meta.performance.road_temperature.holdout, ice = meta.performance.icing.holdout;
+    const iceMean = ice.find(r => r.stn === "지점 평균" && r.empty_days === "빈 날 제외");
+    const sv = meta.station_validation_spearman;
+    sec("읽는 법", [
+      "위험 등급은 두 겨울 전체의 기상(결빙 가능 시간 M1, 모델 예측 시간 M2)·도로(교량 R1, 터널 입출구 R2)·지형(표고 T1, 겨울 그늘 T2, 하천·골짜기 T3) 지표로 매긴 구간 간 상대 비교입니다.",
+      `결빙 가능 조건: ${criteria.icing_condition.definition}. 학습 지점 Ice 관측의 ${(criteria.icing_condition.steps["+ 수분 공급 (= 결빙 가능 조건)"]["Ice 포착률"] * 100).toFixed(0)}%를 포함하고, 조건 안의 Ice 비율이 평균의 ${criteria.icing_condition.steps["+ 수분 공급 (= 결빙 가능 조건)"]["향상도(lift)"].toFixed(1)}배입니다.`,
+      `모델 예측: 04의 결빙관련 노면 분류 확률이 ${criteria.model_prediction.threshold.toFixed(2)} 이상인 시각입니다. 확률을 결빙 가능성(%)으로 읽지 마세요.`,
+      "조건 미충족이나 낮은 등급은 안전 판정이 아닙니다. 지도는 결빙이 생기기 쉬운 곳과 때를 나타내며 실제 노면 결빙을 확인한 것이 아닙니다.",
+    ]);
+    sec("검증", [
+      `노면온도 추정(${meta.performance.road_temperature.method}): 학습에서 뺀 검증 지점 ${est.filter(r => r.stn !== "mean").map(r => `${r.name.replace("(도)", "")} MAE ${r.MAE.toFixed(2)}°C`).join(", ")}.`,
+      iceMean ? `결빙 분류(${meta.performance.icing.method}): 검증 지점 일별 F1(빈 날 제외) ${iceMean.F1.toFixed(3)}. 해전·삼봉은 평가 기간에 결빙 관측일이 없어 오탐만 집계됩니다. 그래서 시간별 지도는 추정 노면온도와 결빙 가능 조건을 중심으로 보세요.` : "",
+      `관측소 ${sv.n_stations}곳에서 위험도 총점은 노면 0°C 이하 비율과 순위상관 ${sv["총점-노면 0°C 이하 비율"]}, Ice 관측 비율과 ${sv["총점-Ice 비율"]}입니다. 등급은 저온 노출을 잘 반영하지만 센서가 기록한 Ice 빈도와는 거의 상관이 없습니다.`,
+      vulnerableNote(),
+    ].filter(Boolean));
+    const src = [
+      "제공 자료: 전북도 고속도로 RWIS, ASOS, AWS, 교량·터널 위경도, 고속도로 중심선, 수치표고모델, 국토교통부 도로·교량·터널·하천 경계 (2026 DATA·AI 분석 경진대회).",
+      `교량·터널 구간: ${meta.facilities.note}. 제공 교량 위경도 CSV의 대표 위치와는 다를 수 있습니다.`,
+      "배경: KOSTAT 2013 시군구 경계(southkorea-maps). 현재 행정경계의 정밀 판정용이 아닙니다. 시각화: D3 7.9.0 (ISC License).",
+      `묶음 생성 ${meta.generated_at}. 모든 자료와 코드는 이 파일 하나에 들어 있어 인터넷 없이 열립니다.`,
+    ];
+    if (ATLAS.vulnerableMeta) src.splice(1, 0, ATLAS.vulnerableMeta.source);
+    sec("자료", src);
+  }
+
+  // ---------- 12. 시작 ----------
+  try {
+    renderNotes();
+    drawMap();
+    selectSeg(view.seg);
+    setMode(view.mode);
+    setHour(view.hour);
+    const resize = new ResizeObserver(() => {
+      if (Math.abs(($("map").clientWidth || 0) - width) > 1) drawMap();
+      renderStrip(true); renderDetail();
+    });
+    resize.observe($("map"));
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); paintTileKeys(); drawMap(); renderStrip(true); renderDetail(); });
+  } catch (err) {
+    $("error").hidden = false;
+    $("error").textContent = "지도를 표시하지 못했습니다: " + err.message;
+    console.error(err);
+  }
+})().catch(err => {
+  const e = document.getElementById("error");
+  e.hidden = false; e.textContent = "자료를 읽지 못했습니다: " + err.message;
+  console.error(err);
+});
+</script>
+</body>
+</html>
