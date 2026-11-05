@@ -1,6 +1,6 @@
 {
   "target": "rst",
-  "method": "앙상블",
+  "method": "앙상블+B3",
   "features": [
     "nbr_rst",
     "rst_phys",
@@ -18,8 +18,12 @@
   "ensemble": [
     "LightGBM(핵심)",
     "Ridge(핵심)",
-    "B1 주변 노면온도"
+    "B1 주변 노면온도",
+    "B3 밑그림+크리깅"
   ],
+  "b3": "B3 밑그림+크리깅",
+  "b3_params": "road_temp_b3.json",
+  "b3_segments": "data/processed/segment_b3.parquet",
   "lgbm_params": {
     "objective": "regression",
     "learning_rate": 0.03,
@@ -34,7 +38,7 @@
     "n_jobs": -1,
     "verbose": -1
   },
-  "lgbm_iterations": 598,
+  "lgbm_iterations": 529,
   "train_stations": [
     12103,
     12209,
