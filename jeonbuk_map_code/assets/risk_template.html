@@ -183,7 +183,7 @@
       <label><input type="checkbox" data-layer="bridge" checked>교량 구간</label>
       <label><input type="checkbox" data-layer="tunnel" checked>터널 구간</label>
       <label><input type="checkbox" data-layer="station" checked>RWIS 관측소</label>
-      <label id="vuln-toggle" hidden><input type="checkbox" data-layer="vuln" checked>상습 결빙구간(행정안전부)</label>
+      <label id="vuln-toggle" hidden><input type="checkbox" data-layer="vuln" checked>기존 결빙취약구간</label>
     </div>
     <div class="events" id="events"><span>주요 사례일</span></div>
   </section>
@@ -633,7 +633,7 @@ const ATLAS = __ATLAS_DATA__;
     legendItem(ll, `background:${token("--station")};width:9px;height:9px;border-radius:1px`, "RWIS 관측소", "key box");
     legendItem(ll, `background:${token("--station")};width:9px;height:9px;transform:rotate(45deg);border-radius:1px`, "검증 지점(학습 제외)", "key box");
     if (view.mode !== "grade") legendItem(ll, `background:transparent;border:2.5px solid ${token("--critical")};width:12px;height:12px`, "결빙관련 노면 관측(눈·얼음 등)", "key box");
-    if (vulnerable.length) legendItem(ll, `background:${token("--band")};height:10px;width:18px`, "상습 결빙구간(행정안전부)");
+    if (vulnerable.length) legendItem(ll, `background:${token("--band")};height:10px;width:18px`, "기존 결빙취약구간");
   }
 
   document.querySelectorAll(".controls .seg-btns button[data-mode]").forEach(b => { b.onclick = () => setMode(b.dataset.mode); });
@@ -674,6 +674,7 @@ const ATLAS = __ATLAS_DATA__;
 
   const INDICATOR_VALUE = {
     M1: v => `${v.icing_cond_hours.toFixed(0)}시간/겨울`, M2: v => `${v.icing_pred_hours.toFixed(1)}시간/겨울`,
+    M3: v => `${v.frz_snow_hours.toFixed(1)}시간/겨울`,
     R1: v => `교량 ${(v.bridge_ratio * 100).toFixed(0)}%`,
     R2: v => v.tunnel_ratio >= .9 ? "터널 안" : `터널까지 ${v.seg_dist_tunnel >= 1000 ? (v.seg_dist_tunnel / 1000).toFixed(1) + "km" : v.seg_dist_tunnel.toFixed(0) + "m"}`,
     T1: v => `${v.elev.toFixed(0)}m`, T2: v => `${(v.shade_winter * 100).toFixed(1)}%`,
@@ -952,29 +953,30 @@ const ATLAS = __ATLAS_DATA__;
   function vulnerableNote() {
     if (!ATLAS.vulnerableMeta) return "";
     const v = ATLAS.vulnerableMeta.stats, pct = x => `${(x * 100).toFixed(0)}%`;
-    return `상습 결빙구간 ${v.sections}개(행정안전부)에서 경계·심각 구간 길이 비율은 ${pct(v.length_weighted_high_share)}로 전체 구간 비율 ${pct(v.high_share_all)}보다 높지만, ` +
-      `같은 노선에 같은 길이로 무작위로 놓아도 ${pct(v.random_placement_mean)}입니다(p=${v.random_placement_p}). 차이의 대부분은 노선 구성이며 노선 안에서 상습 구간을 골라내는 힘은 확인되지 않았습니다.`;
+    return `기존 결빙취약구간 ${v.listed}개소 중 전북 구간에 들어오는 ${v.sections}곳의 경계·심각 구간 비율은 ${pct(v.high_share_in_sections)}이고 전체 구간은 ${pct(v.high_share_all)}입니다. ` +
+      `같은 노선에 무작위로 놓아도 ${pct(v.random_placement_mean)}가 나옵니다(p=${v.random_placement_p}). 기존 등급은 도로 운영까지 포함한 점수라 서로 정답이 아닙니다.`;
   }
   function renderNotes() {
     const n = $("notes"); n.replaceChildren();
     const sec = (title, items) => { n.append(node("h2", {}, title)); const ul = node("ul"); items.forEach(t => ul.append(node("li", {}, t))); n.append(ul); };
     const est = meta.performance.road_temperature.holdout, ice = meta.performance.icing.holdout;
-    const iceMean = ice.find(r => r.stn === "지점 평균" && r.empty_days === "빈 날 제외");
+    const iceMean = ice.find(r => r.stn === "지점 평균");
     const sv = meta.station_validation_spearman;
     sec("읽는 법", [
-      "위험 등급은 두 겨울 전체의 기상(결빙 가능 시간 M1, 모델 예측 시간 M2)·도로(교량 R1, 터널 입출구 R2)·지형(표고 T1, 겨울 그늘 T2, 하천·골짜기 T3) 지표로 매긴 구간 간 상대 비교입니다.",
+      "위험 등급은 두 겨울 전체의 기상(결빙 가능 시간 M1, 모델 예측 시간 M2, 영하 노면 강설 시간 M3)·도로(교량 R1, 터널 입출구 R2)·지형(표고 T1, 겨울 그늘 T2, 하천·골짜기 T3) 지표로 매긴 구간 간 상대 비교입니다.",
       `결빙 가능 조건: ${criteria.icing_condition.definition}. 학습 지점 Ice 관측의 ${(criteria.icing_condition.steps["+ 수분 공급 (= 결빙 가능 조건)"]["Ice 포착률"] * 100).toFixed(0)}%를 포함하고, 조건 안의 Ice 비율이 평균의 ${criteria.icing_condition.steps["+ 수분 공급 (= 결빙 가능 조건)"]["향상도(lift)"].toFixed(1)}배입니다.`,
       `모델 예측: 04의 결빙관련 노면 분류 확률이 ${criteria.model_prediction.threshold.toFixed(2)} 이상인 시각입니다. 확률을 결빙 가능성(%)으로 읽지 마세요.`,
       "조건 미충족이나 낮은 등급은 안전 판정이 아닙니다. 지도는 결빙이 생기기 쉬운 곳과 때를 나타내며 실제 노면 결빙을 확인한 것이 아닙니다.",
     ]);
     sec("검증", [
       `노면온도 추정(${meta.performance.road_temperature.method}): 학습에서 뺀 검증 지점 ${est.filter(r => r.stn !== "mean").map(r => `${r.name.replace("(도)", "")} MAE ${r.MAE.toFixed(2)}°C`).join(", ")}.`,
-      iceMean ? `결빙 분류(${meta.performance.icing.method}): 검증 지점 일별 F1(빈 날 제외) ${iceMean.F1.toFixed(3)}. 해전·삼봉은 평가 기간에 결빙 관측일이 없어 오탐만 집계됩니다. 그래서 시간별 지도는 추정 노면온도와 결빙 가능 조건을 중심으로 보세요.` : "",
+      iceMean ? `결빙 분류(${meta.performance.icing.method}): 검증 지점 일별 F1 ${iceMean.F1.toFixed(3)} (${iceMean.stations_used}개 지점, 평가일 ${iceMean.days}일). 해전·삼봉은 평가 기간에 결빙 관측이 없어 산출불가로 평균에서 뺐습니다. 그래서 시간별 지도는 추정 노면온도와 결빙 가능 조건을 중심으로 보세요.` : "",
       `관측소 ${sv.n_stations}곳에서 위험도 총점은 노면 0°C 이하 비율과 순위상관 ${sv["총점-노면 0°C 이하 비율"]}, Ice 관측 비율과 ${sv["총점-Ice 비율"]}입니다. 등급은 저온 노출을 잘 반영하지만 센서가 기록한 Ice 빈도와는 거의 상관이 없습니다.`,
       vulnerableNote(),
     ].filter(Boolean));
     const src = [
       "제공 자료: 전북도 고속도로 RWIS, ASOS, AWS, 교량·터널 위경도, 고속도로 중심선, 수치표고모델, 국토교통부 도로·교량·터널·하천 경계 (2026 DATA·AI 분석 경진대회).",
+      "추가 자료: ERA5-Land 재분석 (Copernicus Climate Change Service, Muñoz-Sabater et al. 2021, CC-BY 4.0). M3 강설 시간에 씁니다.",
       `교량·터널 구간: ${meta.facilities.note}. 제공 교량 위경도 CSV의 대표 위치와는 다를 수 있습니다.`,
       "배경: KOSTAT 2013 시군구 경계(southkorea-maps). 현재 행정경계의 정밀 판정용이 아닙니다. 시각화: D3 7.9.0 (ISC License).",
       `묶음 생성 ${meta.generated_at}. 모든 자료와 코드는 이 파일 하나에 들어 있어 인터넷 없이 열립니다.`,
