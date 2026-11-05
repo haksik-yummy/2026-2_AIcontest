@@ -1,8 +1,9 @@
 # ===== Data =====
-# 경진대회 데이터(data/raw/)는 용량이 커서 커밋하지 않음
+# 경진대회 데이터와 그 자료로 만든 파일은 커밋하지 않음
 /data/*
 !/data/.gitkeep
 *.zip
+/dist/
 
 # 지도 코드의 제공 자료 사본과 그 자료가 들어간 산출물
 jeonbuk_map_code/bundle/
@@ -14,6 +15,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .ipynb_checkpoints/
+.pytest_cache/
 .venv/
 venv/
 
