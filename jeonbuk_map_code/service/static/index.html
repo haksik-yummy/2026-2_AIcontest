@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>전북 고속도로 결빙 위험도 서비스</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div>
+      <h1>전북 고속도로 결빙 위험도</h1>
+      <p class="sub" id="basemap-note"></p>
+    </div>
+    <nav>
+      <a href="/atlas" target="_blank" rel="noopener">자세한 분석 지도</a>
+      <a href="/api-docs" target="_blank" rel="noopener">API 설명</a>
+    </nav>
+  </header>
+  <div class="banner" id="banner" hidden role="status"></div>
+
+  <section class="bar" aria-label="보기 선택">
+    <div class="seg-btns" role="group" aria-label="자료 종류">
+      <button type="button" data-mode="history" aria-pressed="true">과거 재생</button>
+      <button type="button" data-mode="live" aria-pressed="false">현재 수신</button>
+    </div>
+    <div class="history-only time" id="time-box">
+      <input type="date" id="date" aria-label="날짜">
+      <select id="hour" aria-label="시각"></select>
+      <select id="event" aria-label="주요 사례일"><option value="">주요 사례일 고르기</option></select>
+    </div>
+    <div class="seg-btns" role="group" aria-label="지도 색">
+      <button type="button" data-color="state" aria-pressed="true">결빙 가능 조건</button>
+      <button type="button" data-color="rst" aria-pressed="false">추정 노면온도</button>
+      <button type="button" data-color="grade" aria-pressed="false">위험 등급</button>
+    </div>
+    <span class="data-time" id="data-time" aria-live="polite"></span>
+  </section>
+
+  <main class="layout">
+    <section class="map-card card" aria-label="지도">
+      <div class="legend" id="legend"></div>
+      <div id="map" class="map"></div>
+      <div class="pick-hint" id="pick-hint" hidden>지도에서 위치를 누르세요</div>
+    </section>
+
+    <aside class="side">
+      <article class="card pad" aria-label="현재 보기 요약">
+        <h2>지금 보는 자료</h2>
+        <div class="stats" id="summary"></div>
+        <p class="note" id="summary-note"></p>
+      </article>
+
+      <article class="card pad" aria-label="선택한 구간">
+        <h2>선택한 구간</h2>
+        <div id="selected"><p class="note">지도에서 구간을 누르세요.</p></div>
+      </article>
+
+      <article class="card pad" aria-label="경로 위험 조회">
+        <h2>경로 위험 조회</h2>
+        <div class="seg-btns small" role="group" aria-label="조회 방식">
+          <button type="button" data-route-kind="stretch" aria-pressed="true">노선 구간</button>
+          <button type="button" data-route-kind="naver" aria-pressed="false">출발지·도착지</button>
+        </div>
+        <form id="stretch-form" class="form">
+          <label>노선<select id="s-route"></select></label>
+          <div class="row2">
+            <label>시작 km<input id="s-from" type="number" min="0" step="1" value="0"></label>
+            <label>끝 km<input id="s-to" type="number" min="0" step="1"></label>
+          </div>
+          <button type="submit" class="primary">이 구간 조회</button>
+        </form>
+        <form id="naver-form" class="form" hidden>
+          <p class="note" id="naver-state"></p>
+          <label>출발지 (경도,위도)<span class="with-btn"><input id="n-start" placeholder="126.9,35.8"><button type="button" data-pick="n-start">지도에서</button></span></label>
+          <label>도착지 (경도,위도)<span class="with-btn"><input id="n-goal" placeholder="127.6,35.9"><button type="button" data-pick="n-goal">지도에서</button></span></label>
+          <button type="submit" class="primary">경로 위험 조회</button>
+          <button type="button" id="open-route-app">네이버 지도 앱으로 길찾기</button>
+        </form>
+        <div id="route-result" aria-live="polite"></div>
+      </article>
+
+      <article class="card pad" aria-label="우선 구간 목록">
+        <h2>우선 구간 목록</h2>
+        <p class="note" id="brief-window"></p>
+        <div class="row2">
+          <label>묶음<select id="b-group"><option value="sigungu">시군·노선</option><option value="route">노선</option><option value="branch">지사</option></select></label>
+          <label>묶음별 개수<select id="b-top"><option>3</option><option selected>5</option><option>10</option></select></label>
+        </div>
+        <div id="brief-result"></div>
+      </article>
+    </aside>
+  </main>
+  <footer class="foot" id="foot"></footer>
+</div>
+<script src="/config.js"></script>
+<script src="/assets/d3.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
