@@ -9,7 +9,7 @@
 | 결과물 | 위치 |
 |--------|------|
 | 도로 결빙 발생 영향요인 및 환경조건(임계값) | `data/results/icing_factors.csv`, `icing_conditions.csv` (05-1) |
-| 도로기상 미관측 지점 관측값 추정 AI 모델 | `model/road_temp_*` (03-3) |
+| 도로기상 미관측 지점 관측값 추정 AI 모델 | `model/road_temp_*` (03-2·03-3) |
 | 결빙 위험도 기준표 | `data/results/risk_criteria.csv` (05-2) |
 | 고속도로 구간별 결빙 위험도 지도 | `figures/risk_map.jpg`, `risk_map.png`, `risk_map.html`, `risk_map_shp/` (05-2) |
 | 성능지표 CSV (BIAS·MAE·RMSE, F1-score·Precision·Recall) | `data/results/estimation_scores.csv` (03-3), `icing_scores.csv` (04-3) |
@@ -21,7 +21,7 @@
 | `README.md` | 결과물 구성, 실행환경, 실행 방법 설명 |
 | `requirements.txt` | 주요 라이브러리 버전 (pip) |
 | `environment.yml` | 전체 실행환경 (conda) |
-| `data/` | 학습·평가 데이터. `raw/`에 제공 데이터를 두고, 노트북이 `interim/`·`processed/`에 중간 자료, `results/`에 성능지표·기준표 CSV를 저장한다 (용량 문제로 저장소에는 미포함) |
+| `data/` | 학습·평가 데이터. `raw/`에 제공 데이터, `external/`에 추가 데이터(ERA5-Land)를 두고, 노트북이 `interim/`·`processed/`에 중간 자료, `results/`에 성능지표·기준표 CSV를 저장한다 (용량 문제로 저장소에는 미포함) |
 | `model/` | 학습된 모델 파일 (노면온도 추정 `road_temp_*`, 결빙 분류 `icing_*`) |
 | `src/` | 공통 설정(`config.py`)과 데이터 처리, 변수 생성, 모델, 평가, 위험도 산출, 시각화 모듈 뼈대 |
 | `notebooks/` | 단계별 Jupyter Notebook. 단계(01~05)별 폴더 안에 01-1~05-2로 나뉘어 있다 |
@@ -64,7 +64,22 @@ data/raw/
 ```
 
 - 기간: 2024-11-01 ~ 2025-02-28, 2025-11-01 ~ 2026-02-28
-- 제공 데이터 외 추가 데이터: 현재 사용하지 않음 (사용 시 출처·이용조건·근거 기재)
+- 제공 데이터 외 추가 데이터: ERA5-Land 재분석 1종 (아래)
+
+### 추가 데이터: ERA5-Land 재분석
+
+| 항목 | 내용 |
+|------|------|
+| 자료 | ECMWF ERA5-Land hourly time series. Copernicus Climate Change Service(C3S) Climate Data Store의 `reanalysis-era5-land-timeseries` |
+| 출처 | Muñoz-Sabater, J., et al. (2021). ERA5-Land: a state-of-the-art global reanalysis dataset for land applications. *Earth System Science Data*, 13, 4349–4383. 정확한 인용 문구는 데이터셋 페이지의 안내를 따른다 |
+| 이용 조건 | CC-BY 4.0 (출처 표기) |
+| 받은 범위 | RWIS 17곳 좌표에서 가장 가까운 0.1°(약 9km) 격자 13개, 2024-10-25 ~ 2026-02-28(UTC 기준 요청), 1시간 |
+| 변수 | 2m 기온·이슬점, 지표면온도, 지표 기압, 강수, 강설(물 환산), 하향 단파·장파 복사, 10m 바람(u·v) |
+| 받는 방법 | CDS API로 지점 좌표를 하나씩 요청해 변수별 CSV를 받고, 지점별로 병합하며 단위를 바꾼다 (K → °C, m → mm, J/m² → W/m², UTC → KST) |
+| 두는 곳 | `data/external/era5land_<지점번호>.csv` (지점별 병합본 14열, 용량 문제로 저장소에는 미포함) |
+| 쓰는 근거 | 노면 에너지 수지의 기상 입력(복사·기온·이슬점·바람·강수, Chapman et al. 2001)과 대응하고, 결빙의 수분 공급 가운데 **눈인지 비인지**를 제공 데이터보다 직접 나타낸다. RWIS 관측은 ERA5에 동화되지 않으므로 검증 지점의 관측이 입력에 섞이지 않는다 |
+| 쓰는 곳 | 02-3에서 10분 시간축에 맞춘다 (순간값은 선형 보간, 1시간 합계는 시간 가운데에 두고 보간). 03-2의 3-6-8(노면온도 밑그림), 04-2의 2-3(결빙 분류), 05-1의 2장(영향인자), 05-2의 M3(구간이 쓰는 격자를 모두 받았을 때) |
+| 기여 (학습 지점 교차검증) | 노면온도 추정: 없음. B3 밑그림 RMSE 1.590°C → ERA5 복사 1.594, ERA5 기온 1.821°C로 쓰지 않는다 (03-2의 3-6-8)<br>결빙 분류: AP만 소폭 상승(로지스틱 결빙관련 AP 0.487 → 0.502), 일별 F1 차이의 95% 구간이 0을 포함해 최종 모델에 넣지 않는다 (04-2의 2-3)<br>결빙 영향인자: 3시간 강설의 Ice 판별력 AUC 0.87로 단일 변수 가운데 가장 높다(기존 변수 최고 0.85). 관측소 Ice 비율과의 순위상관은 ERA5 강설 & 영하 노면 0.31, AWS 강수 감지 & 영하 노면 0.16 (14곳이라 유의하지 않음, 05-1의 2장) |
 
 ## 4. 실행환경
 
@@ -106,6 +121,7 @@ pip install -r requirements.txt
 ## 6. 실행 방법
 
 현재 분석은 `notebooks/`의 Notebook으로 실행한다. 01-2부터 05-2까지 번호 순서대로 실행한다 (01-1은 이론 정리 마크다운 문서).
+02-3부터는 `data/external/`의 ERA5-Land 파일(3장)이 필요하다.
 각 Notebook은 자신이 있는 단계 폴더(`notebooks/<단계 폴더>/`)를 작업 폴더로 두고 실행하며, 앞 Notebook이 저장한 중간 자료(`data/interim/`, `data/processed/`)를 뒤 Notebook이 불러 쓴다.
 
 | Notebook | 내용 |
@@ -119,14 +135,15 @@ pip install -r requirements.txt
 | `01_data_exploration/01-7_theory_check_spatial.ipynb` | 이론 검증 Ⅱ: 노면온도의 공간 변동과 노면상태, 탐색 정리 |
 | `02_preprocessing_features/02-1_cleaning.ipynb` | 정제, 10분 시간축 정렬, 결빙 라벨 |
 | `02_preprocessing_features/02-2_features_segments.ipynb` | 변수 생성, 구간 분할 |
-| `03_observation_estimation/03-1_estimation_cv.ipynb` | 관측값 추정 후보 모델 교차검증, 최종 방법 선택 |
-| `03_observation_estimation/03-2_estimation_experiments.ipynb` | 관측값 추정 추가 실험 (고전 ML, MLP, 앙상블, 지점 특성) |
+| `02_preprocessing_features/02-3_external_era5.ipynb` | 추가 데이터 ERA5-Land를 10분 시간축에 정렬, 구간이 쓰는 격자 확인 |
+| `03_observation_estimation/03-1_estimation_cv.ipynb` | 관측값 추정 후보 모델 교차검증(묶음 누수 방지), 기본 앙상블 선택 |
+| `03_observation_estimation/03-2_estimation_experiments.ipynb` | 관측값 추정 추가 실험 (고전 ML, MLP, 앙상블, 지점 특성), RWIS 노면온도 보간 개선(밑그림 + 지문 + 크리깅)과 최종 앙상블 확정, ERA5 밑그림 실험 |
 | `03_observation_estimation/03-3_estimation_holdout.ipynb` | 관측값 추정 검증 지점 평가, 모델 저장 |
 | `04_icing_classification/04-1_icing_cv.ipynb` | 결빙 분류 후보 모델 교차검증, 최종 모델 선택·해석 |
-| `04_icing_classification/04-2_icing_experiments.ipynb` | 결빙 분류 고전 ML 기법·MLP·앙상블 비교 |
+| `04_icing_classification/04-2_icing_experiments.ipynb` | 결빙 분류 고전 ML 기법·MLP·앙상블 비교, ERA5 강수·강설 기여 |
 | `04_icing_classification/04-3_icing_holdout.ipynb` | 결빙 분류 검증 지점 평가, 성능지표 산출 |
-| `05_risk_map/05-1_icing_factors.ipynb` | 구간별 추정, 결빙 영향인자·임계값 |
-| `05_risk_map/05-2_risk_map.ipynb` | 위험도 기준표, 구간별 위험도, 위험도 지도 |
+| `05_risk_map/05-1_icing_factors.ipynb` | 구간별 추정, 결빙 영향인자·임계값 (ERA5 강설 지표 포함) |
+| `05_risk_map/05-2_risk_map.ipynb` | 위험도 기준표, 구간별 위험도, 위험도 지도 (ERA5 강설 지표 M3는 구간 격자 확보 시) |
 
 `scripts/`의 스크립트는 같은 과정을 명령줄로 실행하기 위한 뼈대이며 아직 구현되지 않았다. 구현 후 실행 순서는 다음과 같다.
 
