@@ -340,7 +340,7 @@ class Service:
 
     def vulnerable(self, q):
         if not self.bundle.vulnerable_meta:
-            raise ApiError(404, "no_vulnerable_data", "상습 결빙구간 비교 자료가 없습니다. ops/vulnerable_sections.py를 먼저 실행하세요")
+            raise ApiError(404, "no_vulnerable_data", "기존 결빙취약구간 비교 자료가 없습니다. ops/vulnerable_sections.py를 먼저 실행하세요")
         return {**self.bundle.vulnerable_meta, "geojson": self.bundle.vulnerable}
 
     def config_js(self):
