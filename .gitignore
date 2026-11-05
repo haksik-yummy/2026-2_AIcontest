@@ -4,6 +4,11 @@
 !/data/.gitkeep
 *.zip
 
+# 지도 코드의 제공 자료 사본과 그 자료가 들어간 산출물
+jeonbuk_map_code/bundle/
+jeonbuk_map_code/data/
+jeonbuk_map_code/output/
+
 # ===== Python =====
 __pycache__/
 *.py[cod]
