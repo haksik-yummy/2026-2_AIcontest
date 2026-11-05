@@ -160,7 +160,7 @@ class ApiCase(unittest.TestCase):
         status, d = self.get("/api/v1/segments/TD-014")
         self.assertEqual(status, 200)
         self.assertEqual(d["properties"]["grade"], "심각")
-        self.assertEqual(len(d["indicators"]), 7)
+        self.assertEqual(len(d["indicators"]), 8)
         self.assertEqual(self.get("/api/v1/segments/XX-999")[0], 404)
 
     def test_history_matches_bundle(self):
