@@ -1,40 +1,55 @@
-"""성능 평가.
+"""성능 평가 함수. 노트북 03-3·04-3의 계산을 명령줄 추론(scripts/run_inference.py)에서 쓰도록 옮겼습니다.
 
-1. 관측값 추정: 검증 지점의 실제 관측값과 비교 (BIAS, MAE, RMSE)
-2. 결빙 분류: 일별(00:00~23:50) TP·FP·FN으로 F1-score, Precision, Recall을 구하고
-   평가기간 평균을 최종 성능으로 제시
-   - 지점별 평균과 세 지점 평균을 함께 제출 (QnA 2026-09-29)
-   - 세 지점의 TP·FP·FN을 합산하는 방식은 평가에 반영하지 않음
+결빙 평가는 주최 측 QnA 답변을 따릅니다.
+
+- 실제·예측 결빙이 모두 없는 날은 평균에서 뺍니다 (2026-09-30).
+- 결빙을 놓친 날은 Precision을 평균에서 빼고 Recall·F1은 0입니다 (2026-10-13).
+- 실제 결빙 없이 예측만 한 날은 Recall을 평균에서 빼고 Precision·F1은 0입니다 (2026-11-03).
+- 실제 결빙이 한 번도 없는 지점은 '산출불가'로 적고 평균에서 빼며, 활용 지점 수와 평가 날짜 수를 함께 적습니다 (2026-11-02·11-03).
+- 세 지점의 TP·FP·FN을 합산하는 방식은 평가에 쓰지 않습니다 (2026-09-29).
 """
+import numpy as np
+import pandas as pd
+
+NOT_AVAILABLE = "산출불가"
 
 
 def regression_scores(y_true, y_pred):
-    """관측값 추정 성능을 계산한다.
-
-    Returns:
-        {"BIAS": ..., "MAE": ..., "RMSE": ...}
-    """
-    raise NotImplementedError
+    """노면온도 추정 성능. BIAS는 평균(추정 - 관측)입니다."""
+    err = pd.Series(np.asarray(y_pred, float) - np.asarray(y_true, float)).dropna()
+    return {"N": int(len(err)), "BIAS": float(err.mean()), "MAE": float(err.abs().mean()),
+            "RMSE": float(np.sqrt((err ** 2).mean()))}
 
 
 def daily_icing_scores(df):
-    """한 지점의 일별 TP, FP, FN, F1-score, Precision, Recall을 계산한다.
+    """지점별 일별 TP, FP, FN, Precision, Recall, F1을 구합니다.
 
     Args:
-        df: 관측시각, 실제 결빙(0/1), 예측 결빙(0/1)을 가진 10분 단위 DataFrame
-
-    TODO: 실제·예측 모두 결빙이 없는 날(TP+FP+FN=0)의 처리 기준 정하기
+        df: stn, time, y_true(0/1), y_pred(0/1) 열을 가진 10분 단위 DataFrame. y_true가 비어 있는 시각은 뺍니다.
     """
-    raise NotImplementedError
+    d = df.dropna(subset=["y_true"]).copy()
+    d["date"] = d["time"].dt.normalize()
+    y, p = d["y_true"].astype(int), d["y_pred"].astype(int)
+    d["TP"], d["FP"], d["FN"] = y & p, (1 - y) & p, y & (1 - p)
+    day = d.groupby(["stn", "date"])[["TP", "FP", "FN"]].sum()
+    tp, fp, fn = day["TP"], day["FP"], day["FN"]
+    day["Precision"] = (tp / (tp + fp)).where(tp + fp > 0)
+    day["Recall"] = (tp / (tp + fn)).where(tp + fn > 0)
+    day["F1"] = (2 * tp / (2 * tp + fp + fn)).where(tp + fp + fn > 0)
+    return day.reset_index()
 
 
-def summarize_holdout(daily_by_station):
-    """검증 지점별 평가기간 평균과 세 지점 평균을 정리한다.
-
-    Args:
-        daily_by_station: {지점번호: daily_icing_scores 결과}
-
-    Returns:
-        지점별 행 3개 + 세 지점 평균 행 1개로 된 DataFrame (제출용 CSV)
-    """
-    raise NotImplementedError
+def summarize_holdout(daily):
+    """지점별 평가기간 평균과 지점 평균을 표로 만듭니다. 실제 결빙이 없는 지점은 '산출불가'입니다."""
+    g = daily.assign(obs_day=(daily["TP"] + daily["FN"]) > 0, fp_day=daily["FP"] > 0).groupby("stn")
+    out = pd.DataFrame({"평가일수": g["F1"].count(), "결빙관측일수": g["obs_day"].sum(), "오탐일수": g["fp_day"].sum(),
+                        "F1": g["F1"].mean(), "Precision": g["Precision"].mean(), "Recall": g["Recall"].mean()})
+    used = out["결빙관측일수"] > 0
+    metrics = ["F1", "Precision", "Recall"]
+    mean = out.loc[used, metrics].mean()
+    table = out.astype(object)
+    table.loc[~used, metrics] = NOT_AVAILABLE
+    table.loc[~used, "평가일수"] = 0
+    table.loc["지점 평균"] = {"평가일수": int(out.loc[used, "평가일수"].sum()), "결빙관측일수": int(out.loc[used, "결빙관측일수"].sum()),
+                          "오탐일수": int(out.loc[used, "오탐일수"].sum()), **mean.to_dict()}
+    return table, int(used.sum())
