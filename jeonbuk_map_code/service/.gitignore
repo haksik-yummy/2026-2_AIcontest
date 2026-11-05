@@ -1,0 +1,4 @@
+# 개인 설정과 실행 중 쌓이는 수신 자료는 저장소에 넣지 않습니다.
+config.local.json
+data/
+__pycache__/
