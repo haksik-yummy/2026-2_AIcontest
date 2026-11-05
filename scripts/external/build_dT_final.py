@@ -1,7 +1,14 @@
+"""서해 해기차(dT = 전날 해수면온도 - 850hPa 기온)를 만들어 data/external/haegicha_6h_kst.csv로 저장한다.
+
+실행: python scripts/external/build_dT_final.py
+입력: data/external/era5pl_A_raw, era5pl_B_raw (download_era5_850hpa.py가 받는 ERA5 기압면 자료 CSV, valid_time·pressureLevel·t·u·v·latitude·longitude 열).
+OISST는 ERDDAP에서 받아 oisst_A.csv, oisst_B.csv로 저장해 다시 쓴다.
+"""
 import os, urllib.parse
 import numpy as np, pandas as pd
 
-BASE = r"C:\Users\기환\Desktop\sdk"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE = os.path.join(ROOT, "data", "external")
 POINTS = {"A": (36.0, 126.0), "B": (36.5, 125.5)}      # ERA5 격자 중심 (위도, 경도)
 ERDDAP = "https://coastwatch.pfeg.noaa.gov/erddap/griddap/ncdcOisst21Agg_LonPM180.csv"
 
