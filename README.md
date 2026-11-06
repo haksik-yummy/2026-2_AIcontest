@@ -90,7 +90,7 @@ data/raw/
 | 자료 | 출처와 이용 조건 | 받는 방법 | 쓰는 곳 |
 |------|------|------|------|
 | ERA5-Land 재분석 (0.1° 격자 27개, 1시간) | Copernicus Climate Data Store `reanalysis-era5-land-timeseries`. CC-BY 4.0. Muñoz-Sabater et al. (2021) | `scripts/external/download_era5_cells.py` (CDS 계정 필요) | 02-3 정렬, 03-2, 04-2, 05-1, 05-2의 M3 |
-| 서해 해기차 (해수면온도 - 850hPa 기온, 6시간) | NOAA OISST v2.1 (doi:10.25921/RE9P-PT57, 인용 표기), ERA5 기압면 (Hersbach et al. 2020, CC-BY 4.0) | `scripts/external/download_era5_850hpa.py`, `build_dT_final.py`. 850hPa 요청 스크립트는 실제 내려받기를 확인하지 못했습니다 | 02-3의 6-4, 04-2, 05-1 |
+| 서해 해기차 (해수면온도 - 850hPa 기온, 6시간) | NOAA OISST v2.1 (doi:10.25921/RE9P-PT57, 인용 표기), ERA5 기압면 (Hersbach et al. 2020, CC-BY 4.0) | `scripts/external/download_era5_850hpa.py`, `build_dT_final.py`. | 02-3의 6-4, 04-2, 05-1 |
 | 행정안전부 상습 결빙구간 | 공공데이터포털 15067396, 이용허락범위 제한 없음 | 공공데이터포털에서 CSV 내려받기 | 22개소 위치의 기준점 (`src/vulnerable.py`) |
 | 나들목 누적거리와 좌표 | 위키백과 노선 문서(CC BY-SA), OpenStreetMap Nominatim(ODbL) | `src/vulnerable.py`에 기준점으로 기재 | 22개소 위치의 기준점 |
 
