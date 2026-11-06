@@ -19,10 +19,10 @@
 
 ## 결빙 위험도 지도·API
 
-- `bundle/`: 프로젝트 노트북 02~05의 결과에서 `export_bundle.py`로 만든 값입니다. 구간 등급·요인 점수(`data/results/segment_risk.csv`), 시간별 추정값(`data/processed/segment_estimates.parquet`), RWIS 정시 관측(`data/processed/rwis_10min.parquet`)을 담습니다.
+- `bundle/`: 프로젝트 노트북 02\~05의 결과에서 `export_bundle.py`로 만든 값입니다. 구간 등급·요인 점수(`data/results/segment_risk.csv`), 시간별 추정값(`data/processed/segment_estimates.parquet`), RWIS 정시 관측(`data/processed/rwis_10min.parquet`)을 담습니다.
 - 교량·터널 구간: 제공 자료 8번의 국토교통부 교량·터널 경계 중 02-2와 같은 방법으로 고른 고속도로 객체와 구간 선이 겹치는 부분입니다. 제공 자료 4·5번 CSV의 대표 위치와 다를 수 있습니다.
 - 기존 결빙취약구간: 문제 설명의 [전북도 결빙취약구간 현황] 22개소입니다. 표의 이정은 `src/vulnerable.py`에서 도로 위 위치로 바꿉니다.
-  - 기준점: 행정안전부_상습 결빙구간 (공공데이터포털 15067396, 파일 2025-12-08 수정, 이용허락범위 제한 없음). https://www.data.go.kr/data/15067396/fileData.do 구간번호 70100-83~91, 95는 22개소 표와 연장·순서가 같습니다.
+  - 기준점: 행정안전부_상습 결빙구간 (공공데이터포털 15067396, 파일 2025-12-08 수정, 이용허락범위 제한 없음). https://www.data.go.kr/data/15067396/fileData.do 구간번호 70100-83\~91, 95는 22개소 표와 연장·순서가 같습니다.
   - 기준점: 노선별 나들목 누적거리(위키백과 서해안고속도로, 호남고속도로, 통영대전고속도로 문서, CC BY-SA)와 나들목 좌표(OpenStreetMap Nominatim, ODbL).
 - M3 영하 노면 강설 시간: ERA5-Land 재분석 (Copernicus Climate Change Service, CC-BY 4.0). 출처와 받는 방법은 프로젝트 README 3장입니다.
 - 노면상태 코드: 제공 데이터 설명자료와 기상청 API허브의 노면상태 코드(SFS) 문서가 같습니다.
