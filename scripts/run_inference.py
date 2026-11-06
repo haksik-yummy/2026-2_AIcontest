@@ -58,8 +58,8 @@ def main():
     df["rst_est"] = df["rst_est"].astype("float32")  # 노트북이 저장한 추정값과 같은 정밀도로 결빙을 판정합니다
     scores = pd.DataFrame(rows).T
     scores.loc["세 지점 평균"] = scores.mean()
-    print("\n[노면온도 추정] BIAS, MAE, RMSE (°C)")
-    print(scores[["BIAS", "MAE", "RMSE"]].round(3).to_string())
+    print("\n[노면온도 추정] BIAS, MAE, RMSE (°C), 상관계수 R")
+    print(scores[["BIAS", "MAE", "RMSE", "R"]].round(3).to_string())
 
     df["rst_dpd"] = df["rst_est"] - df["td"]
     df["prob"], df["pred"], meta = predict_icing(df)
