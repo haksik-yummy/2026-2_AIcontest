@@ -36,7 +36,7 @@ python service/server.py --open
 
 ## 3. 출발지·도착지 경로 위험
 
-콘솔의 같은 Application에서 **Directions 5**를 켠 뒤 인증키를 환경변수로 줍니다. 파일이나 브라우저로 보내지 않습니다.
+콘솔의 같은 Application에서 **Directions 5**를 켠 뒤 인증키를 환경변수로 줍니다. 파일이나 브라우저로는 보내지 않습니다.
 
 ```bash
 export NCP_MAPS_KEY_ID="..."
