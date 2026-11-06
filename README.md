@@ -19,11 +19,11 @@
 | 실행 매뉴얼과 코드 | 이 문서, `notebooks/`, `src/`, `scripts/` |
 | 데모영상 | `demo/demo.mp4` |
 
-`docs/report.pdf`는 문제 해결 과정을 정리한 설명 문서입니다.
+설명 문서(`2026_AIcontest_report.docx`)와 발표자료(`2026_AIcontest_presentation.pptx`)는 제출 압축 파일과 따로 제출합니다.
 
 ## 2. 폴더 구성
 
-GitHub 저장소에는 코드와 모델, 그림만 올렸습니다. 제공 자료와 그 자료로 만든 파일, 설명 문서, 데모영상은 제출 파일에만 넣었습니다.
+GitHub 저장소에는 코드와 모델, 그림만 올렸습니다. 제공 자료와 그 자료로 만든 파일, 데모영상은 제출 압축 파일에만 넣었습니다.
 
 | 경로 | 내용 | GitHub | 제출 압축 파일 |
 |------|------|:--:|:--:|
@@ -39,7 +39,6 @@ GitHub 저장소에는 코드와 모델, 그림만 올렸습니다. 제공 자�
 | `scripts/` | 추론, 전체 실행, 모델 비교, 외부 자료 내려받기, 제출 파일 만들기 | O | O |
 | `demo/` | 데모영상 | X | O |
 | `figures/` | 결과 그림, 지도, shapefile | O | O |
-| `docs/report.pdf`, `docs/report.md` | 설명 문서 | X | O |
 | `docs/external_data.md` | 추가 데이터 명세 | O | O |
 | `jeonbuk_map_code/` | 위험도 지도, API, 실시간 추정 코드 | O | O |
 
