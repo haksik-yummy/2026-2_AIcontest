@@ -5,6 +5,13 @@
 *.zip
 /dist/
 
+# 제출 사이트에만 올리는 파일 (설명 문서, 데모영상)
+*.pdf
+*.mp4
+/demo/
+/docs/report.md
+/figures/risk_atlas_example.jpg
+
 # 지도 코드의 제공 자료 사본과 그 자료가 들어간 산출물
 jeonbuk_map_code/bundle/
 jeonbuk_map_code/data/
