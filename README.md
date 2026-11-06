@@ -8,8 +8,8 @@
 
 | 제출 형식 | 파일 |
 |--------|------|
-| 구간별 추정값과 결빙 영향인자, 환경조건(임계값) | `data/results/segment_risk.csv`, `icing_factors.csv`, `icing_conditions.csv` |
-| 학습에 쓰지 않은 관측소와의 비교 수치 (BIAS, MAE, RMSE) | `data/results/estimation_scores.csv` |
+| 구간별 추정값, 결빙 영향인자, 환경조건(임계값), 상관분석 | `data/results/segment_factors.csv`, `segment_risk.csv`, `icing_factors.csv`, `icing_conditions.csv` |
+| 학습에 쓰지 않은 관측소와의 비교 수치 (BIAS, MAE, RMSE, 상관계수) | `data/results/estimation_scores.csv`, 기상요인별 보조표 `weather_scores.csv` |
 | 노면상태 F1-score, Precision, Recall | `data/results/icing_scores.csv`, `icing_daily_scores.csv` |
 | 검증 지점 10분 단위 예측 | `data/results/holdout_submission_10min.csv` |
 | 결빙 위험도 기준표 | `data/results/risk_criteria.csv`, 이 문서 8-4 |
@@ -31,7 +31,7 @@ GitHub 저장소에는 코드와 모델, 그림만 올렸습니다. 제공 자�
 | `requirements.txt`, `environment.yml` | 라이브러리 버전 (pip, conda) | O | O |
 | `data/raw/` | 대회 제공 데이터 | X | X |
 | `data/external/` | 추가 데이터 (ERA5-Land, 해기차, 상습 결빙구간) | X | O |
-| `data/processed/` | 추론에 쓰는 중간 자료 | X | O |
+| `data/processed/` | 추론과 모델 재학습에 쓰는 중간 자료 | X | O |
 | `data/results/` | 성능지표, 기준표, 구간별 위험도 CSV | X | O |
 | `model/` | 노면온도 추정 `road_temp_*`, 결빙 분류 `icing_*` | O | O |
 | `src/` | 공통 설정, 평가 함수, 외부 자료 접합, 결빙취약구간 위치 계산 | O | O |
@@ -122,9 +122,11 @@ ERA5-Land는 눈과 비를 나눠 주고 RWIS 관측이 동화되지 않아서 �
 | 데이터 처리 | numpy 2.5.3, pandas 3.0.6, pyarrow 25.0.1, scipy 1.18.1 |
 | 공간 데이터 | geopandas 1.2.0, shapely 2.1.2, pyproj 3.8.0, pyogrio 0.13.0, rasterio 1.5.1 |
 | 모델 | scikit-learn 1.9.1, lightgbm 4.7.0, xgboost 3.4.1 |
-| 시각화 | matplotlib 3.11.2, seaborn 0.13.2, folium 0.20.0 |
+| 시각화 | matplotlib 3.11.2, folium 0.20.0 |
 
-모든 코드와 주석은 UTF-8입니다. 외부 AI 서비스나 API 없이 실행됩니다. 추가 데이터를 다시 받을 때만 CDS 계정이 필요합니다.
+모든 코드와 주석은 UTF-8입니다. 추론, 학습, 평가는 외부 AI 서비스나 API 없이 실행됩니다. 추가 데이터를 다시 받을 때만 CDS 계정이 필요합니다. 그림의 한글은 NanumGothic, 맑은 고딕, AppleGothic 중 설치된 글꼴로 표시합니다.
+
+지도 서비스의 네이버 배경지도·경로 위험과 기상청 API허브 현재 관측 연결은 선택 기능입니다. 키가 없어도 저장된 결과로 지도, API, 재생 시연이 동작해서 심사용 인증정보는 따로 제공하지 않습니다. 이 외부 API는 관측 수집과 지도 표시에만 쓰고 분석과 예측은 제출 모델이 합니다.
 
 ## 5. 환경 구성
 
@@ -155,6 +157,16 @@ python scripts/run_inference.py
 
 검증 지점 3곳의 노면온도와 10분 단위 결빙을 예측하고 지표를 출력합니다. 저장된 제출 표와 값이 같은지도 확인합니다. 약 1초 걸립니다.
 
+### 최종 모델 다시 학습
+
+제출 압축 파일에는 최종 모델을 학습하는 자료도 들어 있어서 `data/raw/` 없이 실행됩니다. 16코어에서 약 2분 걸립니다.
+
+```bash
+python scripts/run_notebooks.py --only 03-3   # 노면온도 모델 학습, 검증 지점 평가
+python scripts/run_notebooks.py --only 04-1   # 결빙 모델 교차검증, 학습
+python scripts/run_notebooks.py --only 04-3   # 결빙 검증 지점 평가
+```
+
 ### 전체 재실행
 
 `data/raw/`와 `data/external/`을 둔 뒤 실행합니다. 16코어에서 약 1시간 40분 걸립니다.
@@ -183,11 +195,11 @@ python scripts/run_notebooks.py --only 05-2   # 하나만
 | `02_preprocessing_features/02-3_external_era5.ipynb` | ERA5-Land와 해기차를 10분 시간축에 정렬 |
 | `03_observation_estimation/03-1_estimation_cv.ipynb` | 관측값 추정 후보 모델 교차검증 |
 | `03_observation_estimation/03-2_estimation_experiments.ipynb` | 고전 ML, MLP, 앙상블, 지점 특성 실험, RWIS 보간 개선(B3) |
-| `03_observation_estimation/03-3_estimation_holdout.ipynb` | 검증 지점 평가, 모델 저장 |
+| `03_observation_estimation/03-3_estimation_holdout.ipynb` | 검증 지점 평가, 기상요인별 보조 평가, 모델 저장 |
 | `04_icing_classification/04-1_icing_cv.ipynb` | 결빙 분류 후보 모델 교차검증, 최종 모델 선택과 해석 |
 | `04_icing_classification/04-2_icing_experiments.ipynb` | 고전 ML, MLP, 앙상블 비교, 추가 자료 기여 |
 | `04_icing_classification/04-3_icing_holdout.ipynb` | 검증 지점 평가, 제출 항목 표 |
-| `05_risk_map/05-1_icing_factors.ipynb` | 구간별 추정, 결빙 영향인자와 임계값 |
+| `05_risk_map/05-1_icing_factors.ipynb` | 구간별 추정, 결빙 영향인자와 임계값, 구간별 상관분석 |
 | `05_risk_map/05-2_risk_map.ipynb` | 위험도 기준표, 구간별 위험도, 기존 취약구간 비교, 지도 |
 
 ### 지도와 API
@@ -213,14 +225,22 @@ python scripts/run_notebooks.py --only 05-2   # 하나만
 
 최종 방법은 LightGBM, Ridge, 주변 노면온도 보간(B1), 밑그림과 크리깅(B3)의 단순 평균입니다. 학습 지점 교차검증 RMSE는 1.513°C입니다. 검증 지점은 전체 기간(240일) 10분 단위 기준입니다.
 
-| 지점 | BIAS (°C) | MAE (°C) | RMSE (°C) |
-|------|------:|------:|------:|
-| 부곡교 | -0.547 | 0.679 | 0.918 |
-| 해전 | -0.764 | 0.807 | 1.005 |
-| 삼봉 | -0.011 | 0.556 | 0.753 |
-| 세 지점 평균 | -0.440 | 0.680 | 0.892 |
+| 지점 | BIAS (°C) | MAE (°C) | RMSE (°C) | 상관계수 |
+|------|------:|------:|------:|------:|
+| 부곡교 | -0.547 | 0.679 | 0.918 | 0.995 |
+| 해전 | -0.764 | 0.807 | 1.005 | 0.996 |
+| 삼봉 | -0.011 | 0.556 | 0.753 | 0.993 |
+| 세 지점 평균 | -0.440 | 0.680 | 0.892 | 0.995 |
 
 보간 기온을 그대로 쓴 기준(B0)의 세 지점 평균 RMSE는 3.405°C입니다. 검증 지점은 4km 안에 학습 지점이 있어서 관측소에서 먼 구간의 오차는 교차검증 값에 더 가깝습니다.
+
+검증 지점은 노면온도와 노면상태만 관측합니다. 다른 기상요인은 기온, 습도, 풍속을 재는 RWIS 9곳에서 구간 입력으로 쓰는 AWS 보간값을 평가했습니다. 이 9곳의 관측은 보간에 쓰지 않았습니다.
+
+| 요소 (9개 지점 평균) | BIAS | MAE | RMSE | 상관계수 |
+|------|------:|------:|------:|------:|
+| 기온 (°C) | -0.409 | 0.895 | 1.569 | 0.968 |
+| 상대습도 (%) | -0.297 | 5.768 | 7.220 | 0.947 |
+| 풍속 (m/s) | 0.580 | 1.040 | 1.354 | 0.568 |
 
 ### 8-2. 결빙 분류
 
@@ -243,9 +263,11 @@ python scripts/run_notebooks.py --only 05-2   # 하나만
 
 단일 변수 판별력(AUC)은 ERA5 3시간 강설 0.87, 강수 후 경과시간 0.85, 적설 0.85, 최근 12시간 강수시간 0.83 순입니다. 이 지역 Ice의 81%는 강수 중이거나 강수 후 3시간 안에 나왔습니다. 두 겨울의 기온은 비슷했는데 눈이 많았던 2024-25 겨울의 Ice가 3.2배였습니다.
 
+구간별 표는 `data/results/segment_factors.csv`입니다. 구간 233개마다 기상 요약, 모델이 결빙관련 노면으로 예측한 시간의 환경조건(노면온도·기온·노면-이슬점 차 상한, 습도 하한), 저온 시간의 결빙관련 확률과 기상요인의 순위상관, 주요 영향인자 1~3위를 담습니다. 구간별 1위 인자는 최근 12시간 강수시간 87개, 습도 61개, 노면-이슬점 차 45개, 적설 27개, 강수 후 경과시간 13개 구간이고 노면온도, 기온, 풍속이 1위인 구간은 없습니다. 학습 지점의 실제 결빙관련 노면으로 계산해도 상위 세 인자는 최근 12시간 강수시간, 적설, 강수 후 경과시간으로 같습니다.
+
 ### 8-4. 결빙 위험도 기준표
 
-총점 = 0.5 x 기상 + 0.25 x 도로 + 0.25 x 지형 (1~4점)입니다. 기상과 지형은 하위 지표의 평균, 도로는 최댓값입니다. 기준 설정 근거는 `data/results/risk_criteria.csv`의 마지막 열과 05-2의 3장에 있습니다.
+총점 = 0.5 x 기상 + 0.25 x 도로 + 0.25 x 지형 (1~4점)입니다. 기상과 지형은 하위 지표의 평균, 도로는 최댓값입니다. 기상 지표의 수준은 구간 233개의 사분위수이고 등급은 총점 범위 1~4를 같은 폭으로 나눴습니다. 기준 설정 근거는 `data/results/risk_criteria.csv`의 마지막 열과 05-2의 3장에 있습니다.
 
 | 요인 | 지표 | 수준 1 | 수준 2 | 수준 3 | 수준 4 |
 |------|------|------|------|------|------|
@@ -267,6 +289,8 @@ python scripts/run_notebooks.py --only 05-2   # 하나만
 
 관측소 17곳에서 총점과 노면 0°C 이하 비율의 순위상관은 0.63입니다. Ice 비율과는 0.02로 상관이 없습니다. 총점은 저온 노출을 잘 나타내지만 Ice 빈도를 맞히는 값은 아닙니다.
 
+곡선 반경과 종단경사는 기존 평가표의 기하구조 분야가 이미 점수화해서 총점에 넣지 않았습니다. 이 기준표는 그 표의 기후 특성(6점)을 보완하는 기상 위험 정보입니다. 곡선 반경은 `segment_risk.csv`의 `curve_radius_m` 열로 제공합니다. 460m 미만 17개는 모두 연결로이고, 도로 요인에 넣으면 18개 구간의 등급이 바뀝니다(본선 4개). 종단경사는 DEM이 지표면 높이라서 도로 경사로 잴 수 없었습니다(구간 양끝 기준 최대 16.9%).
+
 ### 8-5. 기존 결빙취약구간과 비교
 
 ![위험도와 기존 결빙취약구간](figures/risk_map_vulnerable.jpg)
@@ -280,6 +304,7 @@ python scripts/run_notebooks.py --only 05-2   # 하나만
 ### 8-6. 한계
 
 - 검증 지점의 결빙 평가는 부곡교 한 곳의 19일 결과입니다.
+- 검증 지점은 학습에 쓰지 않았지만 구성 판단 일부에는 참고했습니다(03-2의 3-7, 04-1의 1장). 표고 추세는 교차검증이 나아졌는데도 검증 지점이 나빠져서 뺐고, B1 유지와 지문 미반영은 앙상블 교차검증이 거의 같아서 검증 지점을 보고 정했습니다. 앙상블 교차검증이 가장 낮은 구성을 골랐다면 검증 지점 RMSE는 약 0.92°C입니다.
 - 추정 오차의 절반 가까이는 지점 고유 편향입니다. 학습 지점 14곳으로는 이를 일반화하지 못했고, 학습 지점의 절반은 휴게소·졸음쉼터 안 센서입니다.
 - 주변 RWIS 노면온도를 입력으로 씁니다. 주최 측 답변은 노면상태만 다뤘습니다. 노면온도까지 금지라면 검증 지점 RMSE는 약 1.42~1.46°C로 나빠집니다.
 - 표고 보정이 산지의 밤 노면온도를 조금 낮게 추정합니다.
