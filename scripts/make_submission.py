@@ -5,6 +5,7 @@
 
 코드와 모델에 data/results, 추론과 최종 모델 학습에 쓰는 data/processed, 추가 데이터를 더합니다.
 대회 제공 원자료(data/raw)는 넣지 않습니다.
+설명 문서와 데모영상은 저장소에 없어서 작업 폴더에 있어야 합니다.
 """
 import sys
 import zipfile
@@ -24,6 +25,9 @@ SKIP_NAMES = {".gitkeep", ".DS_Store"}
 SKIP_PREFIX = ("external_check_",)
 
 
+LOCAL_ONLY = ["docs/report.pdf", "docs/report.md", "demo/demo.mp4"]  # 저장소에 넣지 않는 제출 파일
+
+
 def files(item):
     path = ROOT / item
     if path.is_file():
@@ -35,7 +39,7 @@ def files(item):
 
 
 def main():
-    missing = [i for i in ITEMS if not (ROOT / i).exists()]
+    missing = [i for i in [*ITEMS, *LOCAL_ONLY] if not (ROOT / i).exists()]
     if missing:
         print("없는 항목:", missing, file=sys.stderr)
         return 1
