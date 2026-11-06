@@ -12,11 +12,11 @@
 | 학습에 쓰지 않은 관측소와의 비교 수치 (BIAS, MAE, RMSE, 상관계수) | `data/results/estimation_scores.csv`, 기상요인별 보조표 `weather_scores.csv` |
 | 노면상태 F1-score, Precision, Recall | `data/results/icing_scores.csv`, `icing_daily_scores.csv` |
 | 검증 지점 10분 단위 예측 | `data/results/holdout_submission_10min.csv` |
-| 결빙 위험도 기준표 | `data/results/risk_criteria.csv`, 이 문서 8-4 |
+| 결빙 위험도 기준표 | `data/results/risk_criteria.csv`, `README.md` 8-4 |
 | 위험도 지도 | `figures/risk_map.jpg`, `risk_map.png`, `risk_map.html`, `risk_map_shp/` |
 | 기존 결빙취약구간 비교 통합본 | `figures/risk_map_vulnerable.jpg`, `risk_map_shp/vulnerable_sections.shp`, `data/results/vulnerable_comparison.csv` |
 | 관측값 추정·결빙 분류 모델 | `model/` |
-| 실행 매뉴얼과 코드 | 이 문서, `notebooks/`, `src/`, `scripts/` |
+| 실행 매뉴얼과 코드 | `README.md`, `notebooks/`, `src/`, `scripts/` |
 | 데모영상 | `demo/demo.mp4` |
 
 설명 문서(`2026_AIcontest_report.docx`)와 발표자료(`2026_AIcontest_presentation.pptx`)는 제출 압축 파일과 따로 제출합니다.
