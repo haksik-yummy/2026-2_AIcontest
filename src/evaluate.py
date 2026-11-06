@@ -15,10 +15,11 @@ NOT_AVAILABLE = "산출불가"
 
 
 def regression_scores(y_true, y_pred):
-    """노면온도 추정 성능. BIAS는 평균(추정 - 관측)입니다."""
-    err = pd.Series(np.asarray(y_pred, float) - np.asarray(y_true, float)).dropna()
+    """노면온도 추정 성능. BIAS는 평균(추정 - 관측), R은 피어슨 상관계수입니다."""
+    pair = pd.DataFrame({"obs": np.asarray(y_true, float), "est": np.asarray(y_pred, float)}).dropna()
+    err = pair["est"] - pair["obs"]
     return {"N": int(len(err)), "BIAS": float(err.mean()), "MAE": float(err.abs().mean()),
-            "RMSE": float(np.sqrt((err ** 2).mean()))}
+            "RMSE": float(np.sqrt((err ** 2).mean())), "R": float(pair["obs"].corr(pair["est"]))}
 
 
 def daily_icing_scores(df):
