@@ -205,7 +205,16 @@ python scripts/run_notebooks.py --only 05-2   # 하나만
 
 ### 지도와 API
 
-`jeonbuk_map_code/README.md`에 실행 방법이 있습니다. 시간별 지도는 `jeonbuk_map_code/output/jeonbuk_risk_atlas.html`입니다. 제공 자료가 들어 있어서 제출 압축 파일에만 넣었습니다.
+시간별 지도는 `jeonbuk_map_code/output/jeonbuk_risk_atlas.html`입니다. 제공 자료가 들어 있어서 제출 압축 파일에만 넣었습니다.
+
+제출 압축 파일에서는 Python 3.9 이상만 있으면 API와 지도 화면이 실행됩니다. 추가 패키지와 키는 필요하지 않습니다.
+
+```bash
+cd jeonbuk_map_code
+python service/server.py --open
+```
+
+`http://localhost:8000`에서 지도 화면을, `/api-docs`에서 API 설명을 볼 수 있습니다. 네이버 배경지도, 출발지·도착지 경로, 현재 관측 연결은 키가 있을 때만 동작합니다. GitHub 저장소에는 결과 묶음(`bundle/`)이 없어서 노트북을 05-2까지 실행하고 `python jeonbuk_map_code/export_bundle.py`로 먼저 만들어야 합니다. 자세한 내용은 `jeonbuk_map_code/README.md`에 있습니다.
 
 ## 7. 평가 방법
 
@@ -317,8 +326,8 @@ python scripts/run_notebooks.py --only 05-2   # 하나만
 | 항목 | 내용 |
 |------|------|
 | 활용 도구 | Claude Code (Claude Opus 5.5), GitHub Copilot |
-| 활용 단계 | 프로젝트 구조 설계, 실행환경 문서화 |
-| 주요 활용 내용 | Claude Code: 제출 규정에 맞춘 폴더 구조와 `.gitignore`, 분석 코드 뼈대(모듈·함수 구성, Notebook 단계 구성), 실행환경 설정 파일과 README 초안 작성, 코드를 주피터 노트북에 통합, 논문 내용을 md 파일로 요약 저장<br>GitHub Copilot: 코드 및 주석 작성 보조 |
+| 활용 단계 | 프로젝트 구조 설계, 실행환경 문서화, 지도·API 제작 |
+| 주요 활용 내용 | Claude Code: 제출 규정에 맞춘 폴더 구조와 `.gitignore`, 분석 코드 뼈대(모듈·함수 구성, Notebook 단계 구성), 실행환경 설정 파일과 README 초안 작성, 코드를 주피터 노트북에 통합, 논문 내용을 md 파일로 요약 저장, 결빙 위험도 지도와 API 제작 지원<br>GitHub Copilot: 코드 및 주석 작성 보조 |
 | 참가자 주요 기여 및 검증 | 데이터 탐색·전처리, 변수 설계, 모델 선택·학습·평가, 함수 구현, 결과 분석을 팀원이 직접 수행 |
 | 검토한 대안 및 실패사례 | (작성 예정) |
 | 최종 선택 이유 | (작성 예정) |
