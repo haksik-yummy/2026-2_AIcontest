@@ -4,14 +4,14 @@
 
 | 기능 | 실행 | 필요한 것 |
 |---|---|---|
-| 결빙 위험도 지도 (인터넷 없이 열리는 HTML 한 파일) | `python build_risk_map.py --open` | Python만 |
-| 결과 API와 지도 화면 | `python service/server.py --open` | Python만 |
+| 결빙 위험도 지도 (인터넷 없이 열리는 HTML 한 파일) | `python build_risk_map.py --open` | Python |
+| 결과 API와 지도 화면 | `python service/server.py --open` | Python |
 | 네이버 지도 배경, 경로 위험 | 같은 서버 | 네이버 Client ID, Directions 5 인증키 |
 | 현재 관측 수집과 구간 추정 | `python realtime/pipeline.py ...` | 프로젝트 환경, 기상청 API허브 인증키 |
 | 키 없는 재생 시연 | `python realtime/pipeline.py --source replay ...` | 프로젝트 환경, `data/raw` |
-| 우선 구간 목록 | `python ops/briefing.py --start 2025-01-27T18:00` | Python만 |
+| 우선 구간 목록 | `python ops/briefing.py --start 2025-01-27T18:00` | Python |
 | 기존 결빙취약구간 층 | `python ops/vulnerable_sections.py` | 프로젝트 환경, 노트북 05-2의 결과 |
-| 교량·터널·RWIS 위치 지도 (이전 자료) | `python build_map.py --open` | Python만 |
+| 교량·터널·RWIS 위치 지도 (이전 자료) | `python build_map.py --open` | Python |
 
 API와 네이버, 현재 관측 연결은 [jeonbuk_naver_api_guide.md](jeonbuk_naver_api_guide.md), 요청·응답 계약은 [service/API.md](service/API.md)에 있습니다.
 
@@ -65,18 +65,18 @@ python ops/briefing.py --api http://127.0.0.1:8000     # 마지막 수신 시각
 
 ```text
 jeonbuk_map_code/
-  export_bundle.py        프로젝트 결과 → bundle/ (프로젝트 환경)
-  build_risk_map.py       bundle/ → 결빙 위험도 지도 HTML
-  build_map.py            교량·터널·RWIS 위치 지도
-  bundle/                 지도·API가 읽는 분석 결과
-  assets/                 지도 템플릿, D3, 시군구 경계
-  output/                 만들어진 지도와 목록
-  service/                API 서버, 지도 화면, 검사
+  export_bundle.py        #프로젝트 결과 → bundle/ (프로젝트 환경)
+  build_risk_map.py       #bundle/ → 결빙 위험도 지도 HTML
+  build_map.py            #교량·터널·RWIS 위치 지도
+  bundle/                 #지도·API가 읽는 분석 결과
+  assets/                 #지도 템플릿, D3, 시군구 경계
+  output/                 #만들어진 지도와 목록
+  service/                #API 서버, 지도 화면, 검사
     server.py  store.py  geo.py  ops.py  naver.py  API.md  static/
-  realtime/               수집과 구간 추정 (프로젝트 환경)
+  realtime/               #수집과 구간 추정 (프로젝트 환경)
     pipeline.py  engine.py  kma_client.py  replay.py  build_static.py
-  ops/                    우선 구간 목록, 기존 결빙취약구간 층
-  data/                   위치 지도용 CSV 사본
+  ops/                    #우선 구간 목록, 기존 결빙취약구간 층
+  data/                   #위치 지도용 CSV 사본
 ```
 
 `bundle/`과 지도 HTML에는 대회 제공 RWIS 관측값이 들어 있습니다. `data/`에는 제공 원자료 사본이 있습니다. 그래서 세 폴더는 저장소에 넣지 않았습니다.
